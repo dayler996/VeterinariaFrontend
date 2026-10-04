@@ -1,7 +1,8 @@
+// frontend/src/pages/Catalogos/UsuariosPage.jsx
 import { useState, useEffect, useMemo } from 'react';
 import { DataTable } from '../../components/common/DataTable';
 import { Modal } from '../../components/common/Modal';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -9,21 +10,35 @@ import {
 } from '../../services/usuarioService';
 import { getRoles } from '../../services/rolService';
 import { getTrabajadorByCedula } from '../../services/trabajadorService';
+import { useConfirm } from '../../context/ConfirmContext';
 import PageHeader from '../../components/common/PageHeader';
+import SelectField from '../../components/common/SelectField';
 import toast from 'react-hot-toast';
 import {
-  Users, UserPlus, UserCog, Shield, ShieldCheck,
+  UserCog, UserPlus, Shield, ShieldCheck,
   KeyRound, Mail, AtSign, Lock, Search as SearchIcon,
-  X, Pencil, Power, CheckCircle2, AlertTriangle,
-  Check, Briefcase, CreditCard, User as UserIcon,
+  X, Pencil, Power, CheckCircle2,
+  Check, Briefcase, CreditCard,
   ClipboardList, BadgeCheck, Eye, EyeOff,
+  Sparkles, XCircle, Info, ArrowRight,
+  Users as UsersIcon, Calendar, Lock as LockIcon,
 } from 'lucide-react';
 
-/* ── Schema ── */
+/* ═══════════════════════════════════════════════════
+   SCHEMA
+   ═══════════════════════════════════════════════════ */
 const usuarioSchema = z.object({
   email: z.string().email('Email inválido'),
-  nombreUsuario: z.string().min(3, 'Mínimo 3 caracteres').optional().or(z.literal('')),
-  password: z.string().min(6, 'Mínimo 6 caracteres').optional().or(z.literal('')),
+  nombreUsuario: z
+    .string()
+    .min(3, 'Mínimo 3 caracteres')
+    .optional()
+    .or(z.literal('')),
+  password: z
+    .string()
+    .min(6, 'Mínimo 6 caracteres')
+    .optional()
+    .or(z.literal('')),
   rolId: z.number({ required_error: 'Rol requerido' }),
   trabajadorId: z.number().optional().nullable(),
   activo: z.boolean().default(true),
@@ -31,6 +46,8 @@ const usuarioSchema = z.object({
 
 /* ═══════════════════════════════════════════════════ */
 const UsuariosPage = () => {
+  const confirm = useConfirm();
+
   const [usuarios, setUsuarios] = useState([]);
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,13 +65,19 @@ const UsuariosPage = () => {
   const [mostrarPassword, setMostrarPassword] = useState(false);
 
   const {
-    register, handleSubmit, setValue, reset, watch,
-    formState: { errors, isSubmitting },
+    register, handleSubmit, setValue, reset, watch, control,
+    formState: { errors, isSubmitting, isValid, touchedFields, dirtyFields },
   } = useForm({
     resolver: zodResolver(usuarioSchema),
-    defaultValues: { activo: true },
+    mode: 'onChange',
+    reValidateMode: 'onChange',
+    defaultValues: { activo: true, trabajadorId: null, rolId: null },
   });
 
+  const emailWatch = watch('email');
+  const nombreUsuarioWatch = watch('nombreUsuario');
+  const passwordWatch = watch('password');
+  const rolIdWatch = watch('rolId');
   const activoWatch = watch('activo');
 
   /* ── Carga ── */
@@ -79,7 +102,14 @@ const UsuariosPage = () => {
   /* ── Handlers ── */
   const handleNew = () => {
     setSelectedUsuario(null);
-    reset({ email: '', nombreUsuario: '', password: '', rolId: '', trabajadorId: null, activo: true });
+    reset({
+      email: '',
+      nombreUsuario: '',
+      password: '',
+      rolId: null,
+      trabajadorId: null,
+      activo: true,
+    });
     setTrabajadorEncontrado(null);
     setCedulaBusqueda('');
     setMostrarPassword(false);
@@ -107,10 +137,16 @@ const UsuariosPage = () => {
     setModalOpen(true);
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('¿Desactivar este usuario?')) return;
+  const handleDelete = async (usuario) => {
+    const ok = await confirm({
+      title: 'Desactivar usuario',
+      message: `¿Deseas desactivar a "${usuario.email}"? No podrá iniciar sesión hasta que lo reactives.`,
+      confirmText: 'Desactivar',
+      variant: 'danger',
+    });
+    if (!ok) return;
     try {
-      await deleteUsuario(id);
+      await deleteUsuario(usuario.id);
       toast.success('Usuario desactivado');
       loadData();
     } catch (error) {
@@ -133,7 +169,10 @@ const UsuariosPage = () => {
         setValue('trabajadorId', null);
         return;
       }
-      if (trabajador.usuario && (!selectedUsuario || trabajador.usuario.id !== selectedUsuario.id)) {
+      if (
+        trabajador.usuario &&
+        (!selectedUsuario || trabajador.usuario.id !== selectedUsuario.id)
+      ) {
         toast.error('Este trabajador ya está asociado a otro usuario');
         setTrabajadorEncontrado(null);
         setValue('trabajadorId', null);
@@ -163,13 +202,14 @@ const UsuariosPage = () => {
 
   const onSubmit = async (data) => {
     try {
-      if (!data.nombreUsuario) delete data.nombreUsuario;
+      const payload = { ...data };
+      if (!payload.nombreUsuario) delete payload.nombreUsuario;
 
       if (selectedUsuario) {
-        await updateUsuario(selectedUsuario.id, data);
+        await updateUsuario(selectedUsuario.id, payload);
         toast.success('Usuario actualizado');
       } else {
-        await createUsuario(data);
+        await createUsuario(payload);
         toast.success('Usuario creado');
       }
       setModalOpen(false);
@@ -183,15 +223,62 @@ const UsuariosPage = () => {
   const usuariosFiltrados = useMemo(() => {
     if (!busqueda.trim()) return usuarios;
     const q = busqueda.toLowerCase().trim();
-    return usuarios.filter((u) =>
-      u.email?.toLowerCase().includes(q) ||
-      u.nombreUsuario?.toLowerCase().includes(q) ||
-      u.rol?.nombre?.toLowerCase().includes(q) ||
-      u.trabajador?.nombre?.toLowerCase().includes(q)
+    return usuarios.filter(
+      (u) =>
+        u.email?.toLowerCase().includes(q) ||
+        u.nombreUsuario?.toLowerCase().includes(q) ||
+        u.rol?.nombre?.toLowerCase().includes(q) ||
+        u.trabajador?.nombre?.toLowerCase().includes(q)
     );
   }, [usuarios, busqueda]);
 
   const hayBusqueda = busqueda.trim().length > 0;
+
+  /* ── Estado por campo (para FormField) ── */
+  const fieldState = (name, value) => {
+    const touched = touchedFields[name] || dirtyFields[name];
+    if (errors[name]) return 'error';
+    if (
+      touched &&
+      value !== undefined &&
+      value !== null &&
+      String(value).trim() !== ''
+    )
+      return 'valid';
+    return 'idle';
+  };
+
+  /* ── Opciones SelectField ── */
+  const rolOptions = useMemo(
+    () =>
+      roles.map((r) => ({
+        value: r.id,
+        label: r.nombre,
+        description: r.nombre === 'ADMIN' ? 'Acceso total' : 'Acceso limitado',
+        icon: r.nombre === 'ADMIN' ? ShieldCheck : Shield,
+      })),
+    [roles]
+  );
+
+  /* ── Progreso del form ── */
+  const progreso = useMemo(() => {
+    let filled = 0;
+    if (emailWatch?.trim()) filled++;
+    if (rolIdWatch) filled++;
+    if (selectedUsuario) {
+      // Edición: password es opcional
+      return Math.round((filled / 2) * 100);
+    }
+    // Creación: password es obligatorio
+    if (passwordWatch && passwordWatch.length >= 6) filled++;
+    return Math.round((filled / 3) * 100);
+  }, [emailWatch, rolIdWatch, passwordWatch, selectedUsuario]);
+
+  /* ── Rol seleccionado (para preview) ── */
+  const rolSeleccionado = useMemo(
+    () => roles.find((r) => r.id === Number(rolIdWatch)),
+    [roles, rolIdWatch]
+  );
 
   /* ── Columnas ── */
   const columns = [
@@ -213,9 +300,13 @@ const UsuariosPage = () => {
               />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium text-slate-800 truncate">{getValue() || '—'}</p>
+              <p className="text-sm font-medium text-slate-800 truncate">
+                {getValue() || '—'}
+              </p>
               {row.original.nombreUsuario && (
-                <p className="text-[11px] text-slate-400 truncate">@{row.original.nombreUsuario}</p>
+                <p className="text-[11px] text-slate-400 truncate">
+                  @{row.original.nombreUsuario}
+                </p>
               )}
             </div>
           </div>
@@ -230,10 +321,10 @@ const UsuariosPage = () => {
         const isAdmin = rol === 'ADMIN';
         return (
           <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold ${
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border ${
               isAdmin
-                ? 'bg-amber-100 text-amber-700 border border-amber-200'
-                : 'bg-blue-100 text-blue-700 border border-blue-200'
+                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                : 'bg-blue-50 text-blue-700 border-blue-200'
             }`}
           >
             {isAdmin ? (
@@ -253,7 +344,10 @@ const UsuariosPage = () => {
         <div className="flex items-center gap-2 min-w-0">
           {getValue() ? (
             <>
-              <Briefcase className="w-4 h-4 text-slate-400 shrink-0" strokeWidth={2.2} />
+              <Briefcase
+                className="w-4 h-4 text-slate-400 shrink-0"
+                strokeWidth={2.2}
+              />
               <span className="text-sm text-slate-600 truncate">{getValue()}</span>
             </>
           ) : (
@@ -269,21 +363,18 @@ const UsuariosPage = () => {
         const activo = getValue();
         return (
           <span
-            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
-              activo ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'
+            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-semibold border ${
+              activo
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                : 'bg-slate-100 text-slate-500 border-slate-200'
             }`}
           >
             {activo ? (
-              <>
-                <CheckCircle2 className="w-3 h-3" strokeWidth={2.5} />
-                Activo
-              </>
+              <CheckCircle2 className="w-3 h-3" strokeWidth={2.5} />
             ) : (
-              <>
-                <Power className="w-3 h-3" strokeWidth={2.5} />
-                Inactivo
-              </>
+              <XCircle className="w-3 h-3" strokeWidth={2.5} />
             )}
+            {activo ? 'Activo' : 'Inactivo'}
           </span>
         );
       },
@@ -292,7 +383,10 @@ const UsuariosPage = () => {
       id: 'acciones',
       header: 'Acciones',
       cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="flex items-center justify-end gap-1"
+          onClick={(e) => e.stopPropagation()}
+        >
           <button
             onClick={() => handleEdit(row.original)}
             className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition"
@@ -302,7 +396,7 @@ const UsuariosPage = () => {
           </button>
           {row.original.activo && (
             <button
-              onClick={() => handleDelete(row.original.id)}
+              onClick={() => handleDelete(row.original)}
               className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition"
               title="Desactivar"
             >
@@ -338,20 +432,34 @@ const UsuariosPage = () => {
         subtitle={
           <span className="inline-flex items-center gap-2 flex-wrap">
             <UserCog className="w-3.5 h-3.5" strokeWidth={2.2} />
-            {usuariosFiltrados.length} de {usuarios.length} usuario{usuarios.length !== 1 && 's'}
-            {hayBusqueda && <span className="text-blue-600 font-medium"> (filtrados)</span>}
+            {usuariosFiltrados.length} de {usuarios.length} usuario
+            {usuarios.length !== 1 && 's'}
+            {hayBusqueda && (
+              <span className="text-blue-600 font-medium"> (filtrados)</span>
+            )}
           </span>
         }
         actions={
           <>
-            <label className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 cursor-pointer hover:bg-slate-50 transition select-none">
+            <label
+              className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium cursor-pointer transition border ${
+                mostrarInactivos
+                  ? 'bg-blue-50 border-blue-200 text-blue-700'
+                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
               <input
                 type="checkbox"
                 checked={mostrarInactivos}
                 onChange={(e) => setMostrarInactivos(e.target.checked)}
                 className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
               />
-              <span className="whitespace-nowrap">Inactivos</span>
+              {mostrarInactivos ? (
+                <Eye className="w-3.5 h-3.5" strokeWidth={2.2} />
+              ) : (
+                <EyeOff className="w-3.5 h-3.5" strokeWidth={2.2} />
+              )}
+              Inactivos
             </label>
             <button
               onClick={handleNew}
@@ -463,7 +571,9 @@ const UsuariosPage = () => {
                       }`}
                     >
                       <UserCog
-                        className={`w-5 h-5 ${usuario.activo ? 'text-blue-600' : 'text-slate-400'}`}
+                        className={`w-5 h-5 ${
+                          usuario.activo ? 'text-blue-600' : 'text-slate-400'
+                        }`}
                         strokeWidth={2.2}
                       />
                     </div>
@@ -517,7 +627,6 @@ const UsuariosPage = () => {
                     </div>
                   </button>
 
-                  {/* Acciones */}
                   <div className="flex border-t border-slate-100">
                     <button
                       onClick={() => handleEdit(usuario)}
@@ -531,7 +640,7 @@ const UsuariosPage = () => {
                       <>
                         <div className="w-px bg-slate-100" />
                         <button
-                          onClick={() => handleDelete(usuario.id)}
+                          onClick={() => handleDelete(usuario)}
                           className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium
                                      text-red-600 hover:bg-red-50 active:bg-red-100 transition"
                         >
@@ -556,6 +665,61 @@ const UsuariosPage = () => {
         size="md"
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* ═══ Banner de contexto ═══ */}
+          <div className="p-3 rounded-lg border border-blue-200 bg-gradient-to-r from-blue-50 to-white flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md shadow-blue-600/25 shrink-0">
+              {selectedUsuario ? (
+                <Pencil className="w-4.5 h-4.5 text-white" strokeWidth={2.2} />
+              ) : (
+                <Sparkles className="w-4.5 h-4.5 text-white" strokeWidth={2.2} />
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-wider">
+                {selectedUsuario ? 'Editando usuario' : 'Nuevo usuario'}
+              </p>
+              <p className="text-sm font-bold text-slate-800 mt-0.5 truncate">
+                {emailWatch?.trim() || selectedUsuario?.email || 'Completa los datos'}
+              </p>
+              {rolSeleccionado && (
+                <p className="text-[11px] text-blue-700 mt-0.5 flex items-center gap-1">
+                  {rolSeleccionado.nombre === 'ADMIN' ? (
+                    <ShieldCheck className="w-3 h-3 shrink-0" strokeWidth={2.2} />
+                  ) : (
+                    <Shield className="w-3 h-3 shrink-0" strokeWidth={2.2} />
+                  )}
+                  {rolSeleccionado.nombre}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* ═══ Barra de progreso ═══ */}
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3 text-blue-500" strokeWidth={2.5} />
+                Progreso
+              </p>
+              <span
+                className={`text-[11px] font-bold tabular-nums ${
+                  progreso === 100 ? 'text-emerald-600' : 'text-blue-700'
+                }`}
+              >
+                {progreso}%
+              </span>
+            </div>
+            <div className="w-full h-1.5 rounded-full bg-blue-100 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${
+                  progreso === 100
+                    ? 'bg-gradient-to-r from-emerald-400 to-emerald-600'
+                    : 'bg-gradient-to-r from-blue-400 to-blue-600'
+                }`}
+                style={{ width: `${progreso}%` }}
+              />
+            </div>
+          </div>
 
           {/* ─── Sección: Cuenta ─── */}
           <section className="space-y-3">
@@ -566,69 +730,68 @@ const UsuariosPage = () => {
             </div>
 
             {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-blue-500" strokeWidth={2.2} />
-                Email <span className="text-red-500">*</span>
-              </label>
+            <FormField
+              icon={Mail}
+              label="Email"
+              required
+              state={fieldState('email', emailWatch)}
+              error={errors.email?.message}
+              hint="Se usará para iniciar sesión"
+            >
               <input
                 type="email"
                 autoFocus
                 autoComplete="off"
+                placeholder="usuario@ejemplo.com"
                 {...register('email')}
-                className={`w-full border rounded-lg px-3 py-2.5 text-sm bg-white
-                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                  ${errors.email ? 'border-red-400' : 'border-slate-300'}`}
+                className={inputCls(fieldState('email', emailWatch))}
               />
-              {errors.email && (
-                <p className="text-red-600 text-xs mt-1.5 flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3" strokeWidth={2.5} />
-                  {errors.email.message}
-                </p>
-              )}
-            </div>
+            </FormField>
 
             {/* Nombre usuario */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
-                <AtSign className="w-3.5 h-3.5 text-blue-500" strokeWidth={2.2} />
-                Nombre de usuario
-                <span className="ml-auto text-[11px] text-slate-400 font-normal">Opcional</span>
-              </label>
+            <FormField
+              icon={AtSign}
+              label="Nombre de usuario"
+              optional
+              state={fieldState('nombreUsuario', nombreUsuarioWatch)}
+              error={errors.nombreUsuario?.message}
+              hint={
+                nombreUsuarioWatch
+                  ? `Se mostrará como @${nombreUsuarioWatch}`
+                  : 'Identificador corto (ej: jperez)'
+              }
+            >
               <input
-                {...register('nombreUsuario')}
+                autoComplete="off"
                 placeholder="Ej: jperez"
-                className={`w-full border rounded-lg px-3 py-2.5 text-sm bg-white
-                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                  ${errors.nombreUsuario ? 'border-red-400' : 'border-slate-300'}`}
+                {...register('nombreUsuario')}
+                className={inputCls(fieldState('nombreUsuario', nombreUsuarioWatch))}
               />
-              {errors.nombreUsuario && (
-                <p className="text-red-600 text-xs mt-1.5 flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3" strokeWidth={2.5} />
-                  {errors.nombreUsuario.message}
-                </p>
-              )}
-            </div>
+            </FormField>
 
             {/* Password */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5 text-blue-500" strokeWidth={2.2} />
-                Contraseña
-                {selectedUsuario && (
-                  <span className="ml-auto text-[11px] text-slate-400 font-normal">
-                    Dejar vacío para no cambiar
-                  </span>
-                )}
-              </label>
+            <FormField
+              icon={Lock}
+              label="Contraseña"
+              required={!selectedUsuario}
+              optional={!!selectedUsuario}
+              state={fieldState('password', passwordWatch)}
+              error={errors.password?.message}
+              hint={
+                selectedUsuario
+                  ? passwordWatch
+                    ? `${passwordWatch.length}/mín. 6 caracteres`
+                    : 'Dejar vacío para no cambiar la contraseña'
+                  : `${passwordWatch?.length || 0}/mín. 6 caracteres`
+              }
+            >
               <div className="relative">
                 <input
                   type={mostrarPassword ? 'text' : 'password'}
                   autoComplete="new-password"
+                  placeholder="Mínimo 6 caracteres"
                   {...register('password')}
-                  className={`w-full border rounded-lg px-3 py-2.5 pr-10 text-sm bg-white
-                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                    ${errors.password ? 'border-red-400' : 'border-slate-300'}`}
+                  className={`${inputCls(fieldState('password', passwordWatch))} pr-10`}
                 />
                 <button
                   type="button"
@@ -644,38 +807,39 @@ const UsuariosPage = () => {
                   )}
                 </button>
               </div>
-              {errors.password && (
-                <p className="text-red-600 text-xs mt-1.5 flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3" strokeWidth={2.5} />
-                  {errors.password.message}
-                </p>
-              )}
-            </div>
+            </FormField>
 
             {/* Rol */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
-                <Shield className="w-3.5 h-3.5 text-blue-500" strokeWidth={2.2} />
-                Rol <span className="text-red-500">*</span>
-              </label>
-              <select
-                {...register('rolId', { valueAsNumber: true })}
-                className={`w-full border rounded-lg px-3 py-2.5 text-sm bg-white
-                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                  ${errors.rolId ? 'border-red-400' : 'border-slate-300'}`}
-              >
-                <option value="">Seleccione un rol</option>
-                {roles.map((r) => (
-                  <option key={r.id} value={r.id}>{r.nombre}</option>
-                ))}
-              </select>
-              {errors.rolId && (
-                <p className="text-red-600 text-xs mt-1.5 flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3" strokeWidth={2.5} />
-                  {errors.rolId.message}
-                </p>
-              )}
-            </div>
+            <FormField
+              icon={Shield}
+              label="Rol"
+              required
+              state={fieldState('rolId', rolIdWatch)}
+              error={errors.rolId?.message}
+              hint={
+                rolSeleccionado
+                  ? rolSeleccionado.nombre === 'ADMIN'
+                    ? 'Acceso total al sistema'
+                    : 'Acceso limitado según permisos'
+                  : 'Selecciona el rol del usuario'
+              }
+            >
+              <Controller
+                name="rolId"
+                control={control}
+                render={({ field }) => (
+                  <SelectField
+                    value={field.value ?? ''}
+                    onChange={(v) => field.onChange(v === '' ? null : v)}
+                    options={rolOptions}
+                    placeholder="Buscar rol..."
+                    emptyMessage="No hay roles registrados"
+                    state={fieldState('rolId', rolIdWatch)}
+                    tone="blue"
+                  />
+                )}
+              />
+            </FormField>
           </section>
 
           {/* ─── Sección: Trabajador ─── */}
@@ -686,7 +850,9 @@ const UsuariosPage = () => {
               <h3 className="text-base font-semibold text-slate-800">
                 Trabajador asociado
               </h3>
-              <span className="ml-auto text-[11px] text-slate-400 font-normal">Opcional</span>
+              <span className="ml-auto text-[11px] text-slate-400 font-normal">
+                Opcional
+              </span>
             </div>
 
             {!trabajadorEncontrado ? (
@@ -702,7 +868,9 @@ const UsuariosPage = () => {
                       placeholder="Cédula del trabajador"
                       value={cedulaBusqueda}
                       onChange={(e) => setCedulaBusqueda(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), buscarTrabajador())}
+                      onKeyDown={(e) =>
+                        e.key === 'Enter' && (e.preventDefault(), buscarTrabajador())
+                      }
                       className="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white
                                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
@@ -731,7 +899,7 @@ const UsuariosPage = () => {
                   </button>
                 </div>
                 <p className="text-[11px] text-slate-500 flex items-center gap-1.5">
-                  <AlertTriangle className="w-3 h-3 shrink-0 text-slate-400" strokeWidth={2.5} />
+                  <Info className="w-3 h-3 shrink-0 text-slate-400" strokeWidth={2.5} />
                   Ingresa la cédula y pulsa Enter o Buscar
                 </p>
               </>
@@ -747,7 +915,8 @@ const UsuariosPage = () => {
                     </p>
                     <p className="text-[11px] text-emerald-700 truncate">
                       CI: {trabajadorEncontrado.cedula}
-                      {trabajadorEncontrado.cargo?.nombre && ` · ${trabajadorEncontrado.cargo.nombre}`}
+                      {trabajadorEncontrado.cargo?.nombre &&
+                        ` · ${trabajadorEncontrado.cargo.nombre}`}
                     </p>
                   </div>
                 </div>
@@ -765,8 +934,10 @@ const UsuariosPage = () => {
 
           {/* ─── Sección: Estado ─── */}
           <section className="pt-3 border-t border-slate-100">
-            <label className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg cursor-pointer
-                              hover:bg-slate-100 transition select-none">
+            <label
+              className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg cursor-pointer
+                              hover:bg-slate-100 transition select-none"
+            >
               <input
                 type="checkbox"
                 {...register('activo')}
@@ -802,28 +973,33 @@ const UsuariosPage = () => {
             </label>
           </section>
 
-          {/* ─── Botones ─── */}
-          <div className="flex flex-col sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
+          {/* ─── Footer sticky ─── */}
+          <div
+            className="-mx-4 sm:-mx-6 px-4 sm:px-6 pt-3
+                        flex flex-col sm:flex-row justify-end gap-2
+                        border-t border-slate-200"
+          >
             <button
               type="button"
               onClick={() => setModalOpen(false)}
               disabled={isSubmitting}
-              className="inline-flex items-center justify-center gap-2
-                         px-4 py-2.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium
-                         hover:bg-slate-200 active:bg-slate-300 transition
-                         order-2 sm:order-1 disabled:opacity-50"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2
+                         px-5 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-lg text-sm font-medium
+                         hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100 transition
+                         disabled:opacity-50 order-2 sm:order-1"
             >
               <X className="w-4 h-4" strokeWidth={2.5} />
               Cancelar
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="inline-flex items-center justify-center gap-2
-                         px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium
-                         hover:bg-blue-700 active:bg-blue-800 transition
-                         order-1 sm:order-2 disabled:opacity-50 disabled:cursor-not-allowed
-                         shadow-sm shadow-blue-600/20"
+              disabled={isSubmitting || !isValid}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2
+                         px-5 py-2.5 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg text-sm font-semibold
+                         hover:from-blue-600 hover:to-blue-700 active:from-blue-700 active:to-blue-800
+                         transition disabled:opacity-50 disabled:cursor-not-allowed
+                         shadow-md shadow-blue-600/25
+                         order-1 sm:order-2"
             >
               {isSubmitting ? (
                 <>
@@ -833,7 +1009,8 @@ const UsuariosPage = () => {
               ) : (
                 <>
                   <Check className="w-4 h-4" strokeWidth={2.5} />
-                  Guardar
+                  {selectedUsuario ? 'Guardar cambios' : 'Crear usuario'}
+                  <ArrowRight className="w-4 h-4 opacity-70" strokeWidth={2.5} />
                 </>
               )}
             </button>
@@ -842,6 +1019,83 @@ const UsuariosPage = () => {
       </Modal>
     </div>
   );
+};
+
+/* ═══════════════════════════════════════════════════
+   FormField reutilizable
+   ═══════════════════════════════════════════════════ */
+const FormField = ({ icon: Icon, label, required, optional, state, error, hint, children }) => {
+  const stateCls =
+    {
+      idle: { bg: 'bg-blue-100', text: 'text-blue-600', hintIcon: Info },
+      valid: { bg: 'bg-emerald-100', text: 'text-emerald-600', hintIcon: CheckCircle2 },
+      error: { bg: 'bg-red-100', text: 'text-red-600', hintIcon: XCircle },
+    }[state] || {
+      bg: 'bg-blue-100',
+      text: 'text-blue-600',
+      hintIcon: Info,
+    };
+
+  const HintIcon = stateCls.hintIcon;
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
+        <span
+          className={`inline-flex items-center justify-center w-5 h-5 rounded-md transition-colors ${stateCls.bg}`}
+        >
+          <Icon className={`w-3 h-3 ${stateCls.text}`} strokeWidth={2.5} />
+        </span>
+        {label}
+        {required && <span className="text-red-500">*</span>}
+        {optional && (
+          <span className="ml-auto text-[11px] text-slate-400 font-normal">
+            Opcional
+          </span>
+        )}
+        {state === 'valid' && !optional && (
+          <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-emerald-600">
+            <CheckCircle2 className="w-3 h-3" strokeWidth={3} />
+            Válido
+          </span>
+        )}
+      </label>
+
+      <div className="relative">{children}</div>
+
+      <div className="flex items-center justify-between gap-2 mt-1 min-h-[16px]">
+        {error ? (
+          <p className="text-red-600 text-xs flex items-center gap-1">
+            <XCircle className="w-3 h-3 shrink-0" strokeWidth={2.5} />
+            {error}
+          </p>
+        ) : hint ? (
+          <p
+            className={`text-[11px] flex items-center gap-1 ${
+              state === 'valid' ? 'text-emerald-600' : 'text-slate-400'
+            }`}
+          >
+            <HintIcon className="w-3 h-3 shrink-0" strokeWidth={2.5} />
+            {hint}
+          </p>
+        ) : (
+          <span />
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════════
+   Clases input
+   ═══════════════════════════════════════════════════ */
+const inputCls = (state) => {
+  const base =
+    'w-full rounded-lg px-3.5 py-2.5 text-sm bg-white border transition-colors ' +
+    'focus:outline-none focus:ring-2 focus:border-transparent placeholder:text-slate-400';
+  if (state === 'error') return `${base} border-red-400 focus:ring-red-500`;
+  if (state === 'valid') return `${base} border-emerald-300 focus:ring-emerald-500`;
+  return `${base} border-slate-300 hover:border-slate-400 focus:ring-blue-500`;
 };
 
 export default UsuariosPage;
