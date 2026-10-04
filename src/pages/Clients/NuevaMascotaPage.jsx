@@ -6,8 +6,7 @@ import { getCliente } from '../../services/clienteService';
 import PageHeader from '../../components/common/PageHeader';
 import toast from 'react-hot-toast';
 import {
-  PawPrint, UserPlus, Users as UsersIcon,
-  AlertTriangle, Heart, Sparkles,
+  PawPrint, AlertTriangle, Users as UsersIcon, Info,
 } from 'lucide-react';
 
 const NuevaMascotaPage = () => {
@@ -34,8 +33,8 @@ const NuevaMascotaPage = () => {
       await createMascota({ ...data, clienteId: parseInt(id) });
       toast.success('Mascota creada');
       navigate(`/clientes/${id}`);
-    } catch {
-      toast.error('Error al crear mascota');
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Error al crear mascota');
     }
   };
 
@@ -86,25 +85,22 @@ const NuevaMascotaPage = () => {
         }
       />
 
-      {/* ═══ Banner info ═══ */}
-      <div className="mb-4 p-4 rounded-xl border border-cyan-200 bg-gradient-to-r from-cyan-50 to-white flex items-center gap-3">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-cyan-600/25 shrink-0">
-          <UserPlus className="w-6 h-6 text-white" strokeWidth={2.2} />
+      {/* Info strip compacto */}
+      <div className="mb-3 flex flex-col sm:flex-row sm:items-center gap-2
+                      p-3 rounded-lg bg-cyan-50 border border-cyan-100">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <PawPrint className="w-4 h-4 text-cyan-600 shrink-0" strokeWidth={2.2} />
+          <p className="text-xs text-cyan-900">
+            Los campos con <span className="text-red-500 font-bold">*</span> son obligatorios
+          </p>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold text-cyan-700 uppercase tracking-wider">
-            Nuevo registro
-          </p>
-          <p className="text-base font-bold text-slate-800 mt-0.5 truncate">
-            Registrar una nueva mascota
-          </p>
-          <p className="text-xs text-cyan-700 mt-0.5">
-            Los datos quedarán asociados al dueño {cliente.nombre}
-          </p>
+        <div className="flex items-center gap-1.5 text-[11px] text-cyan-700 shrink-0">
+          <Info className="w-3 h-3 shrink-0" strokeWidth={2.5} />
+          Verifica el nombre antes de guardar
         </div>
       </div>
 
-      {/* ═══ Formulario ═══ */}
+      {/* Formulario */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200/60 p-4 sm:p-6">
         <MascotaForm
           onSave={handleSave}

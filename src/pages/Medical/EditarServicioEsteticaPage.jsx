@@ -1,44 +1,62 @@
+// frontend/src/pages/Estetica/EditarServicioEsteticaPage.jsx
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState, useEffect, useMemo } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { getServicioEstetica, updateServicioEstetica } from '../../services/esteticaService';
 import { getTiposEstetica, getCategorias } from '../../services/crudCatalogoService';
 import { getTrabajadores } from '../../services/trabajadorService';
+import SelectField from '../../components/common/SelectField';
 import JsonBuilder from '../../components/common/JsonBuilder';
 import PageHeader from '../../components/common/PageHeader';
 import toast from 'react-hot-toast';
 import {
-  Scissors, Sparkles, User, FileText, ListChecks,
-  Check, X, AlertTriangle, Heart, Users as UsersIcon,
-  Palette, Wand2,
+  Scissors, Sparkles, User, Check, X,
+  AlertTriangle, CheckCircle2, XCircle, Info,
+  ArrowRight, PawPrint, Heart, Users as UsersIcon,
+  ClipboardList, FileText, Palette, Wand2,
 } from 'lucide-react';
 
+/* ═══════════════════════════════════════════════════
+   SCHEMA
+   ═══════════════════════════════════════════════════ */
 const schema = z.object({
-  tipoId: z.number({ required_error: 'Tipo de servicio requerido' }),
-  trabajadorId: z.number({ required_error: 'Peluquero requerido' }),
+  tipoId: z.number({ required_error: 'Selecciona el tipo de servicio' }),
+  trabajadorId: z.number({ required_error: 'Selecciona un peluquero' }),
   observacion: z.any().optional(),
 });
 
+/* ═══════════════════════════════════════════════════ */
 const EditarServicioEsteticaPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const [servicio, setServicio] = useState(null);
   const [tipos, setTipos] = useState([]);
   const [categorias, setCategorias] = useState([]);
-  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('');
-  const [serviciosFiltrados, setServiciosFiltrados] = useState([]);
   const [peluqueros, setPeluqueros] = useState([]);
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('');
   const [observacion, setObservacion] = useState({});
   const [loading, setLoading] = useState(true);
 
   const {
-    register, handleSubmit, setValue, reset,
-    formState: { errors, isSubmitting },
-  } = useForm({ resolver: zodResolver(schema) });
+    register, handleSubmit, setValue, reset, watch, control,
+    formState: { errors, isSubmitting, isValid, touchedFields, dirtyFields },
+  } = useForm({
+    resolver: zodResolver(schema),
+    mode: 'onChange',
+    reValidateMode: 'onChange',
+    defaultValues: { observacion: {} },
+  });
 
-  useEffect(() => { setValue('observacion', observacion); }, [observacion, setValue]);
+  const tipoIdWatch = watch('tipoId');
+  const trabajadorIdWatch = watch('trabajadorId');
+
+  /* Sincronizar JSON con el form */
+  useEffect(() => { setValue('observacion', observacion, { shouldDirty: true }); }, [observacion, setValue]);
+
+  /* Carga de datos */
   useEffect(() => { loadData(); /* eslint-disable-next-line */ }, [id]);
 
   const loadData = async () => {
@@ -62,11 +80,8 @@ const EditarServicioEsteticaPage = () => {
       const tipo = tiposRes.data.find((t) => t.id === serv.tipoId);
       if (tipo) {
         setCategoriaSeleccionada(String(tipo.categoriaId));
-        setServiciosFiltrados(
-          tiposRes.data.filter((t) => t.categoriaId === tipo.categoriaId)
-        );
       }
-      reset({ tipoId: serv.tipoId, trabajadorId: serv.trabajadorId || '' });
+      reset({ tipoId: serv.tipoId, trabajadorId: serv.trabajadorId || undefined });
     } catch {
       toast.error('Error al cargar datos');
     } finally {
@@ -74,15 +89,9 @@ const EditarServicioEsteticaPage = () => {
     }
   };
 
-  const handleCategoriaChange = (e) => {
-    const catId = e.target.value;
-    setCategoriaSeleccionada(catId);
-    if (catId) {
-      setServiciosFiltrados(tipos.filter((t) => t.categoriaId === parseInt(catId)));
-    } else {
-      setServiciosFiltrados([]);
-    }
-    setValue('tipoId', undefined);
+  const handleCategoriaChange = (catId) => {
+    setCategoriaSeleccionada(catId === '' ? '' : String(catId));
+    setValue('tipoId', undefined, { shouldDirty: true });
   };
 
   const onSubmit = async (data) => {
@@ -90,10 +99,78 @@ const EditarServicioEsteticaPage = () => {
       await updateServicioEstetica(id, { ...data, observacion });
       toast.success('Servicio actualizado');
       navigate(`/estetica/${id}`);
-    } catch {
-      toast.error('Error al actualizar');
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Error al actualizar');
     }
   };
+
+  /* Servicios filtrados por categoría */
+  const serviciosFiltrados = useMemo(
+    () => categoriaSeleccionada
+      ? tipos.filter((t) => t.categoriaId === parseInt(categoriaSeleccionada))
+      : [],
+    [tipos, categoriaSeleccionada]
+  );
+
+  /* Seleccionados */
+  const peluqueroSeleccionado = useMemo(
+    () => peluqueros.find((p) => p.id === Number(trabajadorIdWatch)),
+    [peluqueros, trabajadorIdWatch]
+  );
+  const tipoSeleccionado = useMemo(
+    () => tipos.find((t) => t.id === Number(tipoIdWatch)),
+    [tipos, tipoIdWatch]
+  );
+
+  /* Opciones SelectField */
+  const categoriaOptions = useMemo(
+    () => categorias.map((c) => ({
+      value: c.id,
+      label: c.nombre,
+      icon: Palette,
+    })),
+    [categorias]
+  );
+
+  const tipoServicioOptions = useMemo(
+    () => serviciosFiltrados.map((s) => ({
+      value: s.id,
+      label: s.nombre,
+      icon: Sparkles,
+    })),
+    [serviciosFiltrados]
+  );
+
+  const peluqueroOptions = useMemo(
+    () => peluqueros.map((p) => ({
+      value: p.id,
+      label: p.nombre,
+      description: p.cargo?.nombre || 'Peluquero',
+      icon: User,
+    })),
+    [peluqueros]
+  );
+
+  /* Estado por campo */
+  const fieldState = (name, value) => {
+    const touched = touchedFields[name] || dirtyFields[name];
+    if (errors[name]) return 'error';
+    if (touched && value !== undefined && value !== null &&
+        String(value).trim() !== '' && value !== 0) return 'valid';
+    return 'idle';
+  };
+
+  /* Contadores */
+  const obsCount = Object.keys(observacion || {}).length;
+
+  /* Progreso */
+  const progreso = useMemo(() => {
+    let filled = 0;
+    if (categoriaSeleccionada) filled++;
+    if (tipoIdWatch) filled++;
+    if (trabajadorIdWatch) filled++;
+    return Math.round((filled / 3) * 100);
+  }, [categoriaSeleccionada, tipoIdWatch, trabajadorIdWatch]);
 
   if (loading) {
     return (
@@ -112,12 +189,16 @@ const EditarServicioEsteticaPage = () => {
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-12 text-center">
           <AlertTriangle className="w-10 h-10 text-slate-400 mx-auto mb-3" strokeWidth={1.8} />
           <p className="text-slate-500 text-sm">Servicio no encontrado</p>
+          <button
+            onClick={() => navigate('/estetica')}
+            className="mt-3 text-pink-600 hover:text-pink-800 text-sm font-medium"
+          >
+            ← Volver a estética
+          </button>
         </div>
       </div>
     );
   }
-
-  const obsCount = Object.keys(observacion || {}).length;
 
   /* ═══════════════ RENDER ═══════════════ */
   return (
@@ -134,7 +215,7 @@ const EditarServicioEsteticaPage = () => {
         title="Editar Servicio de Estética"
         subtitle={
           <span className="inline-flex items-center gap-2 flex-wrap">
-            <Heart className="w-3.5 h-3.5" strokeWidth={2.2} />
+            <PawPrint className="w-3.5 h-3.5" strokeWidth={2.2} />
             {servicio.mascota?.nombre}
             {servicio.tipo?.nombre && (
               <>
@@ -149,177 +230,269 @@ const EditarServicioEsteticaPage = () => {
         }
       />
 
-      {/* ═══ Banner info servicio ═══ */}
-      <div className="mb-4 p-4 rounded-xl border border-pink-200 bg-gradient-to-r from-pink-50 to-white flex items-center gap-3">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center shadow-lg shadow-pink-600/25 shrink-0">
-          <Scissors className="w-6 h-6 text-white" strokeWidth={2.2} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold text-pink-700 uppercase tracking-wider">
-            Editando servicio
-          </p>
-          <p className="text-base font-bold text-slate-800 mt-0.5 truncate">
-            {servicio.tipo?.nombre || 'Sin tipo asignado'}
-          </p>
-          <div className="flex items-center gap-1.5 text-xs text-pink-700 mt-0.5">
-            <UsersIcon className="w-3 h-3 shrink-0" strokeWidth={2.2} />
-            <span className="truncate">
-              Dueño: {servicio.mascota?.dueno?.nombre || '—'}
-            </span>
+      {/* ═══ Vista previa + Progreso ═══ */}
+      <section className="rounded-xl border border-slate-200/60 bg-gradient-to-br from-pink-50/60 via-white to-white overflow-hidden mb-4">
+        <div className="p-4 sm:p-5">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
+            <div className="shrink-0">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl
+                              bg-gradient-to-br from-pink-100 to-pink-50
+                              border-2 border-white shadow-md
+                              flex items-center justify-center">
+                <Scissors className="w-8 h-8 sm:w-9 sm:h-9 text-pink-500" strokeWidth={2} />
+              </div>
+            </div>
+
+            <div className="flex-1 min-w-0 text-center sm:text-left">
+              <p className="text-[10px] font-semibold text-pink-700 uppercase tracking-wider">
+                Editando servicio
+              </p>
+              <p className="text-base font-bold text-slate-800 mt-0.5 truncate">
+                {servicio.mascota?.nombre} — {servicio.mascota?.dueno?.nombre || 'sin dueño'}
+              </p>
+              <div className="flex items-center justify-center sm:justify-start gap-2.5 mt-1.5 flex-wrap">
+                {tipoSeleccionado && (
+                  <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+                    <Sparkles className="w-3 h-3 shrink-0" strokeWidth={2.2} />
+                    {tipoSeleccionado.nombre}
+                  </span>
+                )}
+                {peluqueroSeleccionado && (
+                  <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+                    <User className="w-3 h-3 shrink-0" strokeWidth={2.2} />
+                    {peluqueroSeleccionado.nombre}
+                  </span>
+                )}
+                {obsCount > 0 && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md
+                                    bg-violet-100 text-violet-700 text-[10px] font-bold uppercase tracking-wide">
+                    <FileText className="w-3 h-3" strokeWidth={2.5} />
+                    {obsCount} nota{obsCount === 1 ? '' : 's'}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Progreso */}
+          <div className="mt-4 pt-4 border-t border-pink-100/60">
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3 text-pink-500" strokeWidth={2.5} />
+                Progreso
+              </p>
+              <span className={`text-[11px] font-bold tabular-nums ${
+                progreso === 100 ? 'text-emerald-600' : 'text-pink-700'
+              }`}>
+                {progreso}%
+              </span>
+            </div>
+            <div className="w-full h-1.5 rounded-full bg-pink-100 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${
+                  progreso === 100
+                    ? 'bg-gradient-to-r from-emerald-400 to-emerald-600'
+                    : 'bg-gradient-to-r from-pink-400 to-pink-600'
+                }`}
+                style={{ width: `${progreso}%` }}
+              />
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
 
-        {/* ═══ Card: Servicio (categoría + tipo) ═══ */}
-        <section className="bg-white rounded-xl shadow-sm border border-slate-200/60 p-4 sm:p-5">
+        {/* ═══ Card: Servicio ═══ */}
+        <section className="rounded-xl border border-slate-200/60 bg-white p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-4">
             <span className="w-1 h-5 bg-pink-600 rounded-full"></span>
-            <Wand2 className="w-4 h-4 text-pink-600 shrink-0" strokeWidth={2.2} />
-            <h2 className="text-base font-semibold text-slate-800">
-              Servicio
-            </h2>
+            <ClipboardList className="w-4 h-4 text-pink-600 shrink-0" strokeWidth={2.2} />
+            <h3 className="text-base font-semibold text-slate-800">Servicio</h3>
           </div>
 
           <div className="space-y-4">
             {/* Categoría */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
-                <Palette className="w-3.5 h-3.5 text-pink-500" strokeWidth={2.2} />
-                Categoría
-              </label>
-              <select
-                value={categoriaSeleccionada}
+            <FormField
+              icon={Palette}
+              label="Categoría"
+              required
+              state={categoriaSeleccionada ? 'valid' : 'idle'}
+              hint={
+                categoriaSeleccionada
+                  ? 'Categoría seleccionada'
+                  : 'Filtra los tipos de servicio disponibles'
+              }
+            >
+              <SelectField
+                value={categoriaSeleccionada ? parseInt(categoriaSeleccionada) : ''}
                 onChange={handleCategoriaChange}
-                className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm bg-white
-                           focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
-              >
-                <option value="">Seleccione una categoría</option>
-                {categorias.map((cat) => (
-                  <option key={cat.id} value={cat.id}>{cat.nombre}</option>
-                ))}
-              </select>
-            </div>
+                options={categoriaOptions}
+                placeholder="Buscar categoría..."
+                tone="pink"
+                state={categoriaSeleccionada ? 'valid' : 'idle'}
+              />
+            </FormField>
 
-            {/* Tipo */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-pink-500" strokeWidth={2.2} />
-                Tipo de servicio <span className="text-red-500">*</span>
-              </label>
-              <select
-                {...register('tipoId', { valueAsNumber: true })}
-                disabled={!categoriaSeleccionada}
-                className={`w-full border rounded-lg px-3 py-2.5 text-sm bg-white
-                  focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500
-                  disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-slate-50
-                  ${errors.tipoId ? 'border-red-400' : 'border-slate-300'}`}
-              >
-                <option value="">
-                  {!categoriaSeleccionada
-                    ? 'Primero selecciona una categoría'
-                    : serviciosFiltrados.length === 0
-                    ? 'No hay servicios en esta categoría'
-                    : 'Seleccione un servicio'}
-                </option>
-                {serviciosFiltrados.map((s) => (
-                  <option key={s.id} value={s.id}>{s.nombre}</option>
-                ))}
-              </select>
-              {errors.tipoId && (
-                <p className="text-red-600 text-xs mt-1.5 flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3" strokeWidth={2.5} />
-                  {errors.tipoId.message}
-                </p>
-              )}
-            </div>
+            {/* Tipo de servicio */}
+            <FormField
+              icon={Wand2}
+              label="Tipo de servicio"
+              required
+              state={fieldState('tipoId', tipoIdWatch)}
+              error={errors.tipoId?.message}
+              hint={
+                !categoriaSeleccionada
+                  ? 'Primero elige una categoría'
+                  : serviciosFiltrados.length === 0
+                  ? 'No hay servicios en esta categoría'
+                  : tipoSeleccionado
+                  ? 'Tipo seleccionado'
+                  : 'Elige el tipo de servicio'
+              }
+            >
+              <Controller
+                name="tipoId"
+                control={control}
+                render={({ field }) => (
+                  <SelectField
+                    value={field.value}
+                    onChange={field.onChange}
+                    options={tipoServicioOptions}
+                    placeholder={
+                      !categoriaSeleccionada
+                        ? 'Primero elige una categoría'
+                        : serviciosFiltrados.length === 0
+                        ? 'Sin servicios disponibles'
+                        : 'Buscar tipo de servicio...'
+                    }
+                    disabled={!categoriaSeleccionada || serviciosFiltrados.length === 0}
+                    state={fieldState('tipoId', tipoIdWatch)}
+                    tone="pink"
+                  />
+                )}
+              />
+            </FormField>
+
+            {/* Aviso sin servicios */}
+            {categoriaSeleccionada && serviciosFiltrados.length === 0 && (
+              <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-2.5">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" strokeWidth={2.2} />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-amber-900">
+                    No hay servicios en esta categoría
+                  </p>
+                  <p className="text-[11px] text-amber-700 mt-0.5">
+                    Registra tipos de servicio para esta categoría en el catálogo.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
         {/* ═══ Card: Peluquero ═══ */}
-        <section className="bg-white rounded-xl shadow-sm border border-slate-200/60 p-4 sm:p-5">
+        <section className="rounded-xl border border-slate-200/60 bg-white p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-4">
             <span className="w-1 h-5 bg-pink-600 rounded-full"></span>
             <User className="w-4 h-4 text-pink-600 shrink-0" strokeWidth={2.2} />
-            <h2 className="text-base font-semibold text-slate-800">
-              Peluquero
-            </h2>
+            <h3 className="text-base font-semibold text-slate-800">Peluquero</h3>
           </div>
 
-          <label className="block text-xs font-medium text-slate-600 mb-1.5">
-            Persona que realizó el servicio
-          </label>
-          <select
-            {...register('trabajadorId', { valueAsNumber: true })}
-            className={`w-full border rounded-lg px-3 py-2.5 text-sm bg-white
-              focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500
-              ${errors.trabajadorId ? 'border-red-400' : 'border-slate-300'}`}
+          <FormField
+            icon={User}
+            label="Peluquero"
+            required
+            state={fieldState('trabajadorId', trabajadorIdWatch)}
+            error={errors.trabajadorId?.message}
+            hint={
+              peluqueroSeleccionado
+                ? `Cargo: ${peluqueroSeleccionado.cargo?.nombre || '—'}`
+                : 'Selecciona quien realizó el servicio'
+            }
           >
-            <option value="">Seleccione un peluquero</option>
-            {peluqueros.map((p) => (
-              <option key={p.id} value={p.id}>{p.nombre}</option>
-            ))}
-          </select>
-          {errors.trabajadorId && (
-            <p className="text-red-600 text-xs mt-1.5 flex items-center gap-1">
-              <AlertTriangle className="w-3 h-3" strokeWidth={2.5} />
-              {errors.trabajadorId.message}
-            </p>
+            <Controller
+              name="trabajadorId"
+              control={control}
+              render={({ field }) => (
+                <SelectField
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={peluqueroOptions}
+                  placeholder="Buscar peluquero..."
+                  emptyMessage="No hay peluqueros registrados"
+                  state={fieldState('trabajadorId', trabajadorIdWatch)}
+                  tone="pink"
+                />
+              )}
+            />
+          </FormField>
+
+          {/* Aviso sin peluqueros */}
+          {peluqueros.length === 0 && (
+            <div className="mt-3 p-3 rounded-lg bg-red-50 border border-red-200 flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" strokeWidth={2.2} />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-red-900">
+                  No hay peluqueros registrados
+                </p>
+                <p className="text-[11px] text-red-700 mt-0.5">
+                  Registra trabajadores con cargo "Peluquero Canino" para continuar.
+                </p>
+              </div>
+            </div>
           )}
         </section>
 
         {/* ═══ Card: Observaciones ═══ */}
-        <section className="bg-white rounded-xl shadow-sm border border-slate-200/60 p-4 sm:p-5">
-          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="w-1 h-5 bg-pink-600 rounded-full"></span>
-              <ListChecks className="w-4 h-4 text-pink-600 shrink-0" strokeWidth={2.2} />
-              <h2 className="text-base font-semibold text-slate-800">
-                Observaciones
-              </h2>
-            </div>
+        <section className="rounded-xl border border-slate-200/60 bg-white p-4 sm:p-5">
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            <span className="w-1 h-5 bg-violet-600 rounded-full"></span>
+            <FileText className="w-4 h-4 text-violet-600 shrink-0" strokeWidth={2.2} />
+            <h3 className="text-base font-semibold text-slate-800">Observaciones</h3>
             {obsCount > 0 && (
               <span className="inline-flex items-center px-2 py-0.5 rounded-full
-                                bg-pink-100 text-pink-700 text-[11px] font-semibold tabular-nums">
-                {obsCount} {obsCount === 1 ? 'registro' : 'registros'}
+                                bg-violet-100 text-violet-700 text-[11px] font-semibold tabular-nums">
+                {obsCount} {obsCount === 1 ? 'nota' : 'notas'}
               </span>
             )}
+            <span className="ml-auto text-[11px] text-slate-400 font-normal">Opcional</span>
           </div>
-
-          <p className="text-xs text-slate-500 mb-3 flex items-start gap-1.5">
-            <FileText className="w-3.5 h-3.5 text-pink-500 shrink-0 mt-0.5" strokeWidth={2.5} />
-            Pares clave-valor: estado del pelaje, comportamiento, productos usados, etc.
+          <p className="text-xs text-slate-500 mb-3 flex items-center gap-1.5">
+            <Info className="w-3 h-3 shrink-0 text-slate-400" strokeWidth={2.5} />
+            Pares clave-valor: estado del pelaje, comportamiento, productos usados...
           </p>
-
-          <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-3">
+          <div className="rounded-lg border border-slate-200 bg-violet-50/30 p-3">
             <JsonBuilder value={observacion} onChange={setObservacion} />
           </div>
         </section>
 
-        {/* ═══ Botones (sticky móvil) ═══ */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-slate-200 p-3
-                        flex gap-2 z-30
-                        sm:static sm:bg-transparent sm:backdrop-blur-none sm:border-0 sm:p-0 sm:justify-end sm:gap-2">
+        {/* ═══ Footer sticky ═══ */}
+        <div className="sticky bottom-0 -mx-4 sm:mx-0 px-4 sm:px-0 pt-3 pb-3 sm:pb-0
+                        bg-white/95 sm:bg-transparent backdrop-blur-sm sm:backdrop-blur-none
+                        border-t border-slate-200 sm:border-0
+                        flex flex-col sm:flex-row justify-end gap-2 z-10">
           <button
             type="button"
             onClick={() => navigate(`/estetica/${id}`)}
             disabled={isSubmitting}
-            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2
-                       px-4 py-2.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium
-                       hover:bg-slate-200 active:bg-slate-300 transition disabled:opacity-50"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2
+                       px-5 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-lg text-sm font-medium
+                       hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100 transition
+                       disabled:opacity-50 order-2 sm:order-1"
           >
             <X className="w-4 h-4" strokeWidth={2.5} />
             Cancelar
           </button>
           <button
             type="submit"
-            disabled={isSubmitting}
-            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2
-                       px-4 py-2.5 bg-pink-600 text-white rounded-lg text-sm font-medium
-                       hover:bg-pink-700 active:bg-pink-800 transition
-                       disabled:opacity-50 disabled:cursor-not-allowed
-                       shadow-sm shadow-pink-600/20"
+            disabled={isSubmitting || !isValid}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2
+                       px-5 py-2.5 bg-gradient-to-br from-pink-500 to-pink-600 text-white rounded-lg text-sm font-semibold
+                       hover:from-pink-600 hover:to-pink-700 active:from-pink-700 active:to-pink-800
+                       transition disabled:opacity-50 disabled:cursor-not-allowed
+                       shadow-md shadow-pink-600/25
+                       order-1 sm:order-2"
           >
             {isSubmitting ? (
               <>
@@ -330,11 +503,66 @@ const EditarServicioEsteticaPage = () => {
               <>
                 <Check className="w-4 h-4" strokeWidth={2.5} />
                 Guardar cambios
+                <ArrowRight className="w-4 h-4 opacity-70" strokeWidth={2.5} />
               </>
             )}
           </button>
         </div>
       </form>
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════════
+   FormField reutilizable
+   ═══════════════════════════════════════════════════ */
+const FormField = ({ icon: Icon, label, required, optional, state, error, hint, children }) => {
+  const stateCls = {
+    idle:  { bg: 'bg-pink-100',    text: 'text-pink-600',    hintIcon: Info },
+    valid: { bg: 'bg-emerald-100', text: 'text-emerald-600', hintIcon: CheckCircle2 },
+    error: { bg: 'bg-red-100',     text: 'text-red-600',     hintIcon: XCircle },
+  }[state] || { bg: 'bg-pink-100', text: 'text-pink-600', hintIcon: Info };
+
+  const HintIcon = stateCls.hintIcon;
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
+        <span className={`inline-flex items-center justify-center w-5 h-5 rounded-md transition-colors ${stateCls.bg}`}>
+          <Icon className={`w-3 h-3 ${stateCls.text}`} strokeWidth={2.5} />
+        </span>
+        {label}
+        {required && <span className="text-red-500">*</span>}
+        {optional && (
+          <span className="ml-auto text-[11px] text-slate-400 font-normal">Opcional</span>
+        )}
+        {state === 'valid' && !optional && (
+          <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-emerald-600">
+            <CheckCircle2 className="w-3 h-3" strokeWidth={3} />
+            Válido
+          </span>
+        )}
+      </label>
+
+      <div className="relative">
+        {children}
+      </div>
+
+      <div className="flex items-center justify-between gap-2 mt-1 min-h-[16px]">
+        {error ? (
+          <p className="text-red-600 text-xs flex items-center gap-1">
+            <XCircle className="w-3 h-3 shrink-0" strokeWidth={2.5} />
+            {error}
+          </p>
+        ) : hint ? (
+          <p className={`text-[11px] flex items-center gap-1 ${
+            state === 'valid' ? 'text-emerald-600' : 'text-slate-400'
+          }`}>
+            <HintIcon className="w-3 h-3 shrink-0" strokeWidth={2.5} />
+            {hint}
+          </p>
+        ) : <span />}
+      </div>
     </div>
   );
 };

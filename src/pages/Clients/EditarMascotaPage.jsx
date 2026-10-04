@@ -5,8 +5,8 @@ import { getMascota, updateMascota } from '../../services/mascotaService';
 import PageHeader from '../../components/common/PageHeader';
 import toast from 'react-hot-toast';
 import {
-  PawPrint, Pencil, AlertTriangle,
-  Heart, Users as UsersIcon, Power,
+  PawPrint, AlertTriangle, Heart, Users as UsersIcon,
+  Power, Info,
 } from 'lucide-react';
 
 const EditarMascotaPage = () => {
@@ -33,8 +33,8 @@ const EditarMascotaPage = () => {
       await updateMascota(id, data);
       toast.success('Mascota actualizada');
       navigate(`/mascotas/${id}`);
-    } catch {
-      toast.error('Error al actualizar');
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Error al actualizar');
     }
   };
 
@@ -77,11 +77,18 @@ const EditarMascotaPage = () => {
           { label: mascota.nombre, to: `/mascotas/${id}` },
           { label: 'Editar' },
         ]}
-        title={`Editar Mascota`}
+        title="Editar Mascota"
         subtitle={
           <span className="inline-flex items-center gap-2 flex-wrap">
             <Heart className="w-3.5 h-3.5" strokeWidth={2.2} />
             {mascota.nombre}
+            {mascota.dueno?.nombre && (
+              <>
+                <span className="text-slate-300">·</span>
+                <UsersIcon className="w-3.5 h-3.5" strokeWidth={2.2} />
+                {mascota.dueno.nombre}
+              </>
+            )}
             {!mascota.activo && (
               <>
                 <span className="text-slate-300">·</span>
@@ -95,28 +102,22 @@ const EditarMascotaPage = () => {
         }
       />
 
-      {/* ═══ Banner info mascota ═══ */}
-      <div className="mb-4 p-4 rounded-xl border border-cyan-200 bg-gradient-to-r from-cyan-50 to-white flex items-center gap-3">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-cyan-600/25 shrink-0">
-          <Pencil className="w-5.5 h-5.5 text-white" strokeWidth={2.2} />
+      {/* Info strip compacto */}
+      <div className="mb-3 flex flex-col sm:flex-row sm:items-center gap-2
+                      p-3 rounded-lg bg-cyan-50 border border-cyan-100">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <PawPrint className="w-4 h-4 text-cyan-600 shrink-0" strokeWidth={2.2} />
+          <p className="text-xs text-cyan-900">
+            Modifica los datos y guarda los cambios
+          </p>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold text-cyan-700 uppercase tracking-wider">
-            Editando mascota
-          </p>
-          <p className="text-base font-bold text-slate-800 mt-0.5 truncate">
-            {mascota.nombre}
-          </p>
-          <div className="flex items-center gap-1.5 text-xs text-cyan-700 mt-0.5">
-            <UsersIcon className="w-3 h-3 shrink-0" strokeWidth={2.2} />
-            <span className="truncate">
-              Dueño: {mascota.dueno?.nombre || '—'}
-            </span>
-          </div>
+        <div className="flex items-center gap-1.5 text-[11px] text-cyan-700 shrink-0">
+          <Info className="w-3 h-3 shrink-0" strokeWidth={2.5} />
+          Los campos con <span className="text-red-500 font-bold">*</span> son obligatorios
         </div>
       </div>
 
-      {/* ═══ Formulario ═══ */}
+      {/* Formulario */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200/60 p-4 sm:p-6">
         <MascotaForm
           initialData={mascota}
