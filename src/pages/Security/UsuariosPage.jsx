@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { DataTable } from '../../components/common/DataTable';
 import { Modal } from '../../components/common/Modal';
 import { useForm } from 'react-hook-form';
@@ -9,7 +9,15 @@ import {
 } from '../../services/usuarioService';
 import { getRoles } from '../../services/rolService';
 import { getTrabajadorByCedula } from '../../services/trabajadorService';
+import PageHeader from '../../components/common/PageHeader';
 import toast from 'react-hot-toast';
+import {
+  Users, UserPlus, UserCog, Shield, ShieldCheck,
+  KeyRound, Mail, AtSign, Lock, Search as SearchIcon,
+  X, Pencil, Power, CheckCircle2, AlertTriangle,
+  Check, Briefcase, CreditCard, User as UserIcon,
+  ClipboardList, BadgeCheck, Eye, EyeOff,
+} from 'lucide-react';
 
 /* ── Schema ── */
 const usuarioSchema = z.object({
@@ -20,28 +28,6 @@ const usuarioSchema = z.object({
   trabajadorId: z.number().optional().nullable(),
   activo: z.boolean().default(true),
 });
-
-/* ── Iconos ── */
-const EditIcon = ({ className = 'w-4 h-4' }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-  </svg>
-);
-const PowerIcon = ({ className = 'w-4 h-4' }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M18.36 6.64A9 9 0 11 5.64 6.64M12 2v10" />
-  </svg>
-);
-const SearchIcon = ({ className = 'w-4 h-4' }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
-  </svg>
-);
-const UserIcon = ({ className = 'w-4 h-4' }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-  </svg>
-);
 
 /* ═══════════════════════════════════════════════════ */
 const UsuariosPage = () => {
@@ -58,16 +44,21 @@ const UsuariosPage = () => {
   const [trabajadorEncontrado, setTrabajadorEncontrado] = useState(null);
   const [buscando, setBuscando] = useState(false);
 
+  /* Password visible */
+  const [mostrarPassword, setMostrarPassword] = useState(false);
+
   const {
-    register, handleSubmit, setValue, reset,
+    register, handleSubmit, setValue, reset, watch,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(usuarioSchema),
     defaultValues: { activo: true },
   });
 
+  const activoWatch = watch('activo');
+
   /* ── Carga ── */
-  useEffect(() => { loadData(); }, [mostrarInactivos]);
+  useEffect(() => { loadData(); /* eslint-disable-next-line */ }, [mostrarInactivos]);
 
   const loadData = async () => {
     try {
@@ -91,6 +82,7 @@ const UsuariosPage = () => {
     reset({ email: '', nombreUsuario: '', password: '', rolId: '', trabajadorId: null, activo: true });
     setTrabajadorEncontrado(null);
     setCedulaBusqueda('');
+    setMostrarPassword(false);
     setModalOpen(true);
   };
 
@@ -111,6 +103,7 @@ const UsuariosPage = () => {
       setTrabajadorEncontrado(null);
       setCedulaBusqueda('');
     }
+    setMostrarPassword(false);
     setModalOpen(true);
   };
 
@@ -187,43 +180,67 @@ const UsuariosPage = () => {
   };
 
   /* ── Filtrado local ── */
-  const usuariosFiltrados = usuarios.filter(u => {
-    if (!busqueda) return true;
-    const q = busqueda.toLowerCase();
-    return (
+  const usuariosFiltrados = useMemo(() => {
+    if (!busqueda.trim()) return usuarios;
+    const q = busqueda.toLowerCase().trim();
+    return usuarios.filter((u) =>
       u.email?.toLowerCase().includes(q) ||
       u.nombreUsuario?.toLowerCase().includes(q) ||
       u.rol?.nombre?.toLowerCase().includes(q) ||
       u.trabajador?.nombre?.toLowerCase().includes(q)
     );
-  });
+  }, [usuarios, busqueda]);
+
+  const hayBusqueda = busqueda.trim().length > 0;
 
   /* ── Columnas ── */
   const columns = [
     {
-      header: 'Email',
-      accessorKey: 'email',
-      cell: ({ getValue }) => (
-        <span className="font-medium text-sm text-gray-800 truncate">
-          {getValue()}
-        </span>
-      ),
-    },
-    {
       header: 'Usuario',
-      accessorKey: 'nombreUsuario',
-      cell: ({ getValue }) => (
-        <span className="text-sm text-gray-600">{getValue() || '—'}</span>
-      ),
+      accessorKey: 'email',
+      cell: ({ getValue, row }) => {
+        const activo = row.original.activo;
+        return (
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div
+              className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                activo ? 'bg-blue-100' : 'bg-slate-100'
+              }`}
+            >
+              <UserCog
+                className={`w-4 h-4 ${activo ? 'text-blue-600' : 'text-slate-400'}`}
+                strokeWidth={2.2}
+              />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-slate-800 truncate">{getValue() || '—'}</p>
+              {row.original.nombreUsuario && (
+                <p className="text-[11px] text-slate-400 truncate">@{row.original.nombreUsuario}</p>
+              )}
+            </div>
+          </div>
+        );
+      },
     },
     {
       header: 'Rol',
       accessorKey: 'rol.nombre',
       cell: ({ getValue }) => {
         const rol = getValue();
-        const color = rol === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700';
+        const isAdmin = rol === 'ADMIN';
         return (
-          <span className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-semibold ${color}`}>
+          <span
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold ${
+              isAdmin
+                ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                : 'bg-blue-100 text-blue-700 border border-blue-200'
+            }`}
+          >
+            {isAdmin ? (
+              <ShieldCheck className="w-3 h-3" strokeWidth={2.5} />
+            ) : (
+              <Shield className="w-3 h-3" strokeWidth={2.5} />
+            )}
             {rol || '—'}
           </span>
         );
@@ -233,31 +250,55 @@ const UsuariosPage = () => {
       header: 'Trabajador',
       accessorKey: 'trabajador.nombre',
       cell: ({ getValue }) => (
-        <span className="text-sm text-gray-600">{getValue() || '—'}</span>
+        <div className="flex items-center gap-2 min-w-0">
+          {getValue() ? (
+            <>
+              <Briefcase className="w-4 h-4 text-slate-400 shrink-0" strokeWidth={2.2} />
+              <span className="text-sm text-slate-600 truncate">{getValue()}</span>
+            </>
+          ) : (
+            <span className="text-xs text-slate-400">—</span>
+          )}
+        </div>
       ),
     },
     {
       header: 'Estado',
       accessorKey: 'activo',
-      cell: ({ getValue }) => (
-        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${
-          getValue() ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-        }`}>
-          {getValue() ? 'Activo' : 'Inactivo'}
-        </span>
-      ),
+      cell: ({ getValue }) => {
+        const activo = getValue();
+        return (
+          <span
+            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
+              activo ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'
+            }`}
+          >
+            {activo ? (
+              <>
+                <CheckCircle2 className="w-3 h-3" strokeWidth={2.5} />
+                Activo
+              </>
+            ) : (
+              <>
+                <Power className="w-3 h-3" strokeWidth={2.5} />
+                Inactivo
+              </>
+            )}
+          </span>
+        );
+      },
     },
     {
       id: 'acciones',
       header: 'Acciones',
       cell: ({ row }) => (
-        <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => handleEdit(row.original)}
             className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition"
             title="Editar"
           >
-            <EditIcon />
+            <Pencil className="w-4 h-4" strokeWidth={2.2} />
           </button>
           {row.original.activo && (
             <button
@@ -265,7 +306,7 @@ const UsuariosPage = () => {
               className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition"
               title="Desactivar"
             >
-              <PowerIcon />
+              <Power className="w-4 h-4" strokeWidth={2.2} />
             </button>
           )}
         </div>
@@ -273,105 +314,261 @@ const UsuariosPage = () => {
     },
   ];
 
-  if (loading) return <div className="text-center p-4 text-gray-500">Cargando...</div>;
+  if (loading) {
+    return (
+      <div className="p-3 sm:p-4">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-12 text-center">
+          <div className="animate-spin w-8 h-8 mx-auto border-2 border-slate-200 border-t-blue-600 rounded-full" />
+          <p className="text-sm text-slate-500 mt-3">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
 
   /* ═══════════════ RENDER ═══════════════ */
   return (
     <div className="p-3 sm:p-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Usuarios</h1>
-          <p className="text-xs sm:text-sm text-gray-500">
+      <PageHeader
+        icon="🔐"
+        breadcrumbs={[
+          { label: 'Dashboard', to: '/dashboard' },
+          { label: 'Usuarios' },
+        ]}
+        title="Usuarios del sistema"
+        subtitle={
+          <span className="inline-flex items-center gap-2 flex-wrap">
+            <UserCog className="w-3.5 h-3.5" strokeWidth={2.2} />
             {usuariosFiltrados.length} de {usuarios.length} usuario{usuarios.length !== 1 && 's'}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          <label className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 cursor-pointer hover:bg-gray-50">
-            <input
-              type="checkbox"
-              checked={mostrarInactivos}
-              onChange={(e) => setMostrarInactivos(e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            Inactivos
-          </label>
-          <button
-            onClick={handleNew}
-            className="inline-flex items-center justify-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium
-                       hover:bg-blue-700 transition w-full sm:w-auto"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            Nuevo Usuario
-          </button>
-        </div>
-      </div>
+            {hayBusqueda && <span className="text-blue-600 font-medium"> (filtrados)</span>}
+          </span>
+        }
+        actions={
+          <>
+            <label className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 cursor-pointer hover:bg-slate-50 transition select-none">
+              <input
+                type="checkbox"
+                checked={mostrarInactivos}
+                onChange={(e) => setMostrarInactivos(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+              />
+              <span className="whitespace-nowrap">Inactivos</span>
+            </label>
+            <button
+              onClick={handleNew}
+              className="inline-flex items-center justify-center gap-1.5
+                         bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium
+                         hover:bg-blue-700 active:bg-blue-800 transition
+                         shadow-sm shadow-blue-600/20"
+            >
+              <UserPlus className="w-4 h-4" strokeWidth={2.5} />
+              Nuevo Usuario
+            </button>
+          </>
+        }
+      />
 
-      {/* Buscador */}
+      {/* ═══ Buscador ═══ */}
       {usuarios.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 mb-4">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200/60 p-3 sm:p-4 mb-4">
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-              <SearchIcon />
-            </span>
+            <SearchIcon
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+              strokeWidth={2.2}
+            />
             <input
               type="text"
               placeholder="Buscar por email, usuario, rol o trabajador..."
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm
+              className="w-full pl-9 pr-9 py-2.5 border border-slate-300 rounded-lg text-sm
                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
+            {busqueda && (
+              <button
+                type="button"
+                onClick={() => setBusqueda('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md
+                           text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+                aria-label="Limpiar búsqueda"
+              >
+                <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+              </button>
+            )}
           </div>
         </div>
       )}
 
-      {/* Contenido */}
+      {/* ═══ Contenido ═══ */}
       {usuariosFiltrados.length === 0 ? (
-        <div className="bg-white rounded-xl border-2 border-dashed border-gray-200 p-12 text-center">
-          <div className="w-14 h-14 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center text-2xl">
-            🔐
+        <div className="bg-white rounded-xl border-2 border-dashed border-slate-200 p-10 sm:p-12 text-center">
+          <div className="w-14 h-14 mx-auto mb-3 bg-slate-100 rounded-full flex items-center justify-center">
+            <ClipboardList className="w-7 h-7 text-slate-400" strokeWidth={1.8} />
           </div>
-          <p className="text-gray-500 text-sm font-medium">
-            {busqueda ? 'No hay usuarios que coincidan' : 'No hay usuarios registrados'}
+          <p className="text-slate-500 text-sm font-medium">
+            {hayBusqueda
+              ? 'No hay usuarios que coincidan con tu búsqueda'
+              : 'Aún no hay usuarios registrados'}
           </p>
-          {!busqueda && (
+          {!hayBusqueda && (
             <button
               onClick={handleNew}
-              className="mt-3 text-blue-600 hover:text-blue-800 text-sm font-medium"
+              className="mt-3 text-blue-600 hover:text-blue-800 text-sm font-medium inline-flex items-center gap-1"
             >
-              + Crear el primero
+              <UserPlus className="w-3.5 h-3.5" strokeWidth={2.5} />
+              Crear el primero
+            </button>
+          )}
+          {hayBusqueda && (
+            <button
+              onClick={() => setBusqueda('')}
+              className="mt-3 text-blue-600 hover:text-blue-800 text-sm font-medium inline-flex items-center gap-1"
+            >
+              <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+              Limpiar búsqueda
             </button>
           )}
         </div>
       ) : (
-        <DataTable
-          columns={columns}
-          data={usuariosFiltrados}
-          onRowClick={handleEdit}
-          showGlobalFilter={false}
-        />
+        <>
+          {/* ═══ DESKTOP: Tabla ═══ */}
+          <div className="hidden lg:block bg-white rounded-xl shadow-sm border border-slate-200/60 overflow-hidden">
+            <DataTable
+              columns={columns}
+              data={usuariosFiltrados}
+              onRowClick={handleEdit}
+              showGlobalFilter={false}
+              rowClassName={(row) => (!row.activo ? 'opacity-60' : '')}
+            />
+          </div>
+
+          {/* ═══ MÓVIL: Cards ═══ */}
+          <div className="lg:hidden space-y-2.5">
+            {usuariosFiltrados.map((usuario) => {
+              const isAdmin = usuario.rol?.nombre === 'ADMIN';
+              return (
+                <div
+                  key={usuario.id}
+                  className={`bg-white rounded-xl shadow-sm border border-slate-200/60 overflow-hidden
+                             transition ${!usuario.activo ? 'opacity-60' : ''}`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleEdit(usuario)}
+                    className="w-full text-left p-3.5 hover:bg-slate-50/60 active:bg-slate-100/60 transition
+                               flex items-start gap-3"
+                  >
+                    <div
+                      className={`w-11 h-11 rounded-lg flex items-center justify-center shrink-0 ${
+                        usuario.activo ? 'bg-blue-100' : 'bg-slate-100'
+                      }`}
+                    >
+                      <UserCog
+                        className={`w-5 h-5 ${usuario.activo ? 'text-blue-600' : 'text-slate-400'}`}
+                        strokeWidth={2.2}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-semibold text-sm text-slate-800 truncate">
+                          {usuario.email}
+                        </p>
+                        <span
+                          className={`shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide ${
+                            usuario.activo
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-slate-200 text-slate-600'
+                          }`}
+                        >
+                          {usuario.activo ? 'On' : 'Off'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        {usuario.nombreUsuario && (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-slate-500">
+                            <AtSign className="w-3 h-3 shrink-0" strokeWidth={2.2} />
+                            {usuario.nombreUsuario}
+                          </span>
+                        )}
+                        {usuario.trabajador?.nombre && (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-slate-500">
+                            <Briefcase className="w-3 h-3 shrink-0" strokeWidth={2.2} />
+                            <span className="truncate">{usuario.trabajador.nombre}</span>
+                          </span>
+                        )}
+                      </div>
+
+                      {usuario.rol?.nombre && (
+                        <span
+                          className={`inline-flex items-center gap-1 mt-1.5 px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                            isAdmin
+                              ? 'bg-amber-100 text-amber-700'
+                              : 'bg-blue-100 text-blue-700'
+                          }`}
+                        >
+                          {isAdmin ? (
+                            <ShieldCheck className="w-3 h-3" strokeWidth={2.5} />
+                          ) : (
+                            <Shield className="w-3 h-3" strokeWidth={2.5} />
+                          )}
+                          {usuario.rol.nombre}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Acciones */}
+                  <div className="flex border-t border-slate-100">
+                    <button
+                      onClick={() => handleEdit(usuario)}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium
+                                 text-blue-600 hover:bg-blue-50 active:bg-blue-100 transition"
+                    >
+                      <Pencil className="w-3.5 h-3.5" strokeWidth={2.3} />
+                      Editar
+                    </button>
+                    {usuario.activo && (
+                      <>
+                        <div className="w-px bg-slate-100" />
+                        <button
+                          onClick={() => handleDelete(usuario.id)}
+                          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium
+                                     text-red-600 hover:bg-red-50 active:bg-red-100 transition"
+                        >
+                          <Power className="w-3.5 h-3.5" strokeWidth={2.3} />
+                          Desactivar
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {/* ═══ Modal ═══ */}
       <Modal
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => !isSubmitting && setModalOpen(false)}
         title={selectedUsuario ? 'Editar Usuario' : 'Nuevo Usuario'}
         size="md"
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+
           {/* ─── Sección: Cuenta ─── */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 pb-1 border-b border-gray-100">
-              <span className="w-1 h-4 bg-blue-600 rounded-full" />
-              <h3 className="text-sm font-semibold text-gray-700">Cuenta</h3>
+          <section className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="w-1 h-5 bg-blue-600 rounded-full"></span>
+              <KeyRound className="w-4 h-4 text-blue-600 shrink-0" strokeWidth={2.2} />
+              <h3 className="text-base font-semibold text-slate-800">Cuenta</h3>
             </div>
 
+            {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-blue-500" strokeWidth={2.2} />
                 Email <span className="text-red-500">*</span>
               </label>
               <input
@@ -379,125 +576,176 @@ const UsuariosPage = () => {
                 autoFocus
                 autoComplete="off"
                 {...register('email')}
-                className={`w-full border rounded-lg px-3 py-2.5 text-sm
+                className={`w-full border rounded-lg px-3 py-2.5 text-sm bg-white
                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                  ${errors.email ? 'border-red-400' : 'border-gray-300'}`}
+                  ${errors.email ? 'border-red-400' : 'border-slate-300'}`}
               />
-              {errors.email && <p className="text-red-600 text-xs mt-1">{errors.email.message}</p>}
+              {errors.email && (
+                <p className="text-red-600 text-xs mt-1.5 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" strokeWidth={2.5} />
+                  {errors.email.message}
+                </p>
+              )}
             </div>
 
+            {/* Nombre usuario */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nombre de usuario <span className="text-gray-400 font-normal">(opcional)</span>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
+                <AtSign className="w-3.5 h-3.5 text-blue-500" strokeWidth={2.2} />
+                Nombre de usuario
+                <span className="ml-auto text-[11px] text-slate-400 font-normal">Opcional</span>
               </label>
               <input
                 {...register('nombreUsuario')}
                 placeholder="Ej: jperez"
-                className={`w-full border rounded-lg px-3 py-2.5 text-sm
+                className={`w-full border rounded-lg px-3 py-2.5 text-sm bg-white
                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                  ${errors.nombreUsuario ? 'border-red-400' : 'border-gray-300'}`}
+                  ${errors.nombreUsuario ? 'border-red-400' : 'border-slate-300'}`}
               />
               {errors.nombreUsuario && (
-                <p className="text-red-600 text-xs mt-1">{errors.nombreUsuario.message}</p>
+                <p className="text-red-600 text-xs mt-1.5 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" strokeWidth={2.5} />
+                  {errors.nombreUsuario.message}
+                </p>
               )}
             </div>
 
+            {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Contraseña{' '}
+              <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-blue-500" strokeWidth={2.2} />
+                Contraseña
                 {selectedUsuario && (
-                  <span className="text-gray-400 font-normal">(dejar vacío para no cambiar)</span>
+                  <span className="ml-auto text-[11px] text-slate-400 font-normal">
+                    Dejar vacío para no cambiar
+                  </span>
                 )}
               </label>
-              <input
-                type="password"
-                autoComplete="new-password"
-                {...register('password')}
-                className={`w-full border rounded-lg px-3 py-2.5 text-sm
-                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                  ${errors.password ? 'border-red-400' : 'border-gray-300'}`}
-              />
-              {errors.password && <p className="text-red-600 text-xs mt-1">{errors.password.message}</p>}
+              <div className="relative">
+                <input
+                  type={mostrarPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  {...register('password')}
+                  className={`w-full border rounded-lg px-3 py-2.5 pr-10 text-sm bg-white
+                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                    ${errors.password ? 'border-red-400' : 'border-slate-300'}`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrarPassword((v) => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md
+                             text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+                  aria-label={mostrarPassword ? 'Ocultar' : 'Mostrar'}
+                >
+                  {mostrarPassword ? (
+                    <EyeOff className="w-4 h-4" strokeWidth={2.2} />
+                  ) : (
+                    <Eye className="w-4 h-4" strokeWidth={2.2} />
+                  )}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="text-red-600 text-xs mt-1.5 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" strokeWidth={2.5} />
+                  {errors.password.message}
+                </p>
+              )}
             </div>
 
+            {/* Rol */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
+                <Shield className="w-3.5 h-3.5 text-blue-500" strokeWidth={2.2} />
                 Rol <span className="text-red-500">*</span>
               </label>
               <select
                 {...register('rolId', { valueAsNumber: true })}
-                className={`w-full border rounded-lg px-3 py-2.5 text-sm
+                className={`w-full border rounded-lg px-3 py-2.5 text-sm bg-white
                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                  ${errors.rolId ? 'border-red-400' : 'border-gray-300'}`}
+                  ${errors.rolId ? 'border-red-400' : 'border-slate-300'}`}
               >
                 <option value="">Seleccione un rol</option>
-                {roles.map(r => (
+                {roles.map((r) => (
                   <option key={r.id} value={r.id}>{r.nombre}</option>
                 ))}
               </select>
-              {errors.rolId && <p className="text-red-600 text-xs mt-1">{errors.rolId.message}</p>}
+              {errors.rolId && (
+                <p className="text-red-600 text-xs mt-1.5 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" strokeWidth={2.5} />
+                  {errors.rolId.message}
+                </p>
+              )}
             </div>
-          </div>
+          </section>
 
           {/* ─── Sección: Trabajador ─── */}
-          <div className="space-y-3 pt-2">
-            <div className="flex items-center gap-2 pb-1 border-b border-gray-100">
-              <span className="w-1 h-4 bg-blue-600 rounded-full" />
-              <h3 className="text-sm font-semibold text-gray-700">
-                Trabajador asociado <span className="text-gray-400 font-normal">(opcional)</span>
+          <section className="space-y-3 pt-3 border-t border-slate-100">
+            <div className="flex items-center gap-2">
+              <span className="w-1 h-5 bg-blue-600 rounded-full"></span>
+              <Briefcase className="w-4 h-4 text-blue-600 shrink-0" strokeWidth={2.2} />
+              <h3 className="text-base font-semibold text-slate-800">
+                Trabajador asociado
               </h3>
+              <span className="ml-auto text-[11px] text-slate-400 font-normal">Opcional</span>
             </div>
 
             {!trabajadorEncontrado ? (
               <>
                 <div className="flex flex-col sm:flex-row gap-2">
-                  <input
-                    type="text"
-                    placeholder="Cédula del trabajador"
-                    value={cedulaBusqueda}
-                    onChange={(e) => setCedulaBusqueda(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), buscarTrabajador())}
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm
-                               focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
+                  <div className="relative flex-1">
+                    <CreditCard
+                      className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+                      strokeWidth={2.2}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Cédula del trabajador"
+                      value={cedulaBusqueda}
+                      onChange={(e) => setCedulaBusqueda(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), buscarTrabajador())}
+                      className="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white
+                                 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={buscarTrabajador}
                     disabled={buscando}
-                    className="inline-flex items-center justify-center gap-1.5 bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium
-                               hover:bg-blue-700 transition disabled:opacity-50 w-full sm:w-auto"
+                    className="inline-flex items-center justify-center gap-1.5
+                               bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium
+                               hover:bg-blue-700 active:bg-blue-800 transition
+                               disabled:opacity-50 disabled:cursor-not-allowed
+                               shadow-sm shadow-blue-600/20"
                   >
                     {buscando ? (
                       <>
-                        <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                        </svg>
+                        <span className="animate-spin w-4 h-4 border-2 border-white/40 border-t-white rounded-full" />
                         Buscando...
                       </>
                     ) : (
                       <>
-                        <SearchIcon />
+                        <SearchIcon className="w-4 h-4" strokeWidth={2.5} />
                         Buscar
                       </>
                     )}
                   </button>
                 </div>
-                <p className="text-[11px] text-gray-500">
+                <p className="text-[11px] text-slate-500 flex items-center gap-1.5">
+                  <AlertTriangle className="w-3 h-3 shrink-0 text-slate-400" strokeWidth={2.5} />
                   Ingresa la cédula y pulsa Enter o Buscar
                 </p>
               </>
             ) : (
-              <div className="flex items-start justify-between gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-9 h-9 bg-green-100 rounded-full flex items-center justify-center shrink-0">
-                    <UserIcon className="w-4 h-4 text-green-700" />
+              <div className="flex items-start justify-between gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center shrink-0">
+                    <BadgeCheck className="w-5 h-5 text-emerald-700" strokeWidth={2.2} />
                   </div>
                   <div className="min-w-0">
-                    <p className="font-semibold text-sm text-gray-800 truncate">
+                    <p className="font-semibold text-sm text-slate-800 truncate">
                       {trabajadorEncontrado.nombre}
                     </p>
-                    <p className="text-[11px] text-gray-600">
+                    <p className="text-[11px] text-emerald-700 truncate">
                       CI: {trabajadorEncontrado.cedula}
                       {trabajadorEncontrado.cargo?.nombre && ` · ${trabajadorEncontrado.cargo.nombre}`}
                     </p>
@@ -509,58 +757,84 @@ const UsuariosPage = () => {
                   className="p-1.5 rounded-lg text-red-600 hover:bg-red-100 transition shrink-0"
                   title="Quitar trabajador"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <X className="w-4 h-4" strokeWidth={2.5} />
                 </button>
               </div>
             )}
-          </div>
+          </section>
 
           {/* ─── Sección: Estado ─── */}
-          <div className="pt-2">
-            <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition">
+          <section className="pt-3 border-t border-slate-100">
+            <label className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg cursor-pointer
+                              hover:bg-slate-100 transition select-none">
               <input
                 type="checkbox"
                 {...register('activo')}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
               />
-              <div>
-                <span className="block text-sm font-medium text-gray-700">Usuario activo</span>
-                <span className="block text-[11px] text-gray-500">
+              <div className="flex-1 min-w-0">
+                <span className="block text-sm font-medium text-slate-700">
+                  Usuario activo
+                </span>
+                <span className="block text-[11px] text-slate-500">
                   Los usuarios inactivos no pueden iniciar sesión
                 </span>
               </div>
+              <span
+                className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide transition ${
+                  activoWatch
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'bg-slate-200 text-slate-600'
+                }`}
+              >
+                {activoWatch ? (
+                  <>
+                    <CheckCircle2 className="w-3 h-3" strokeWidth={2.5} />
+                    Activo
+                  </>
+                ) : (
+                  <>
+                    <Power className="w-3 h-3" strokeWidth={2.5} />
+                    Inactivo
+                  </>
+                )}
+              </span>
             </label>
-          </div>
+          </section>
 
           {/* ─── Botones ─── */}
-          <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2 border-t border-gray-100">
+          <div className="flex flex-col sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium
-                         hover:bg-gray-200 transition order-2 sm:order-1"
+              disabled={isSubmitting}
+              className="inline-flex items-center justify-center gap-2
+                         px-4 py-2.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium
+                         hover:bg-slate-200 active:bg-slate-300 transition
+                         order-2 sm:order-1 disabled:opacity-50"
             >
+              <X className="w-4 h-4" strokeWidth={2.5} />
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium
-                         hover:bg-blue-700 transition disabled:opacity-50
-                         inline-flex items-center justify-center gap-2 order-1 sm:order-2"
+              className="inline-flex items-center justify-center gap-2
+                         px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium
+                         hover:bg-blue-700 active:bg-blue-800 transition
+                         order-1 sm:order-2 disabled:opacity-50 disabled:cursor-not-allowed
+                         shadow-sm shadow-blue-600/20"
             >
               {isSubmitting ? (
                 <>
-                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
+                  <span className="animate-spin w-4 h-4 border-2 border-white/40 border-t-white rounded-full" />
                   Guardando...
                 </>
               ) : (
-                'Guardar'
+                <>
+                  <Check className="w-4 h-4" strokeWidth={2.5} />
+                  Guardar
+                </>
               )}
             </button>
           </div>

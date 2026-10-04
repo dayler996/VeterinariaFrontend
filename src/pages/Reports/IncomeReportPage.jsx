@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { DataTable } from '../../components/common/DataTable';
 import Pagination from '../../components/common/Pagination';
+import PageHeader from '../../components/common/PageHeader';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '../../utils/formatters';
 import * as XLSX from 'xlsx';
@@ -12,6 +13,15 @@ import Select from 'react-select';
 import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import {
+  BarChart3, TrendingUp, TrendingDown, Target,
+  DollarSign, FileSpreadsheet, FileDown, FileText,
+  Filter, ChevronDown, ChevronUp, X, Check,
+  Users as UsersIcon, Package, CreditCard, Receipt,
+  Calendar, Search as SearchIcon, FolderOpen, Tag,
+  ClipboardList, AlertTriangle, Clock, CheckCircle2,
+  XCircle, Wallet, PieChart, Layers,
+} from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════
    FILTROS AVANZADOS — Colapsable y responsive
@@ -83,67 +93,72 @@ const FiltrosAvanzados = ({
     let productosFiltrados = productos;
     if (tipoProductoSeleccionado) {
       productosFiltrados = productos.filter(
-        p => p.tipoProductoId === parseInt(tipoProductoSeleccionado)
+        (p) => p.tipoProductoId === parseInt(tipoProductoSeleccionado)
       );
     }
-    return productosFiltrados.map(p => ({ value: p.id, label: p.nombre }));
+    return productosFiltrados.map((p) => ({ value: p.id, label: p.nombre }));
   }, [productos, tipoProductoSeleccionado]);
 
   const selectStyles = {
     control: (base) => ({
       ...base,
-      minHeight: '38px',
+      minHeight: '42px',
       fontSize: '13px',
-      borderColor: '#d1d5db',
+      borderColor: '#cbd5e1',
+      borderRadius: '0.5rem',
+      '&:hover': { borderColor: '#94a3b8' },
     }),
     menuPortal: (base) => ({ ...base, zIndex: 9999 }),
     menu: (base) => ({ ...base, fontSize: '13px' }),
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 mb-4">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200/60 mb-4 overflow-hidden">
       {/* Cabecera: toggle */}
       <button
         type="button"
-        onClick={() => setAbierto(o => !o)}
-        className="w-full flex items-center justify-between gap-2 text-left"
+        onClick={() => setAbierto((o) => !o)}
+        className="w-full flex items-center justify-between gap-2 px-3 sm:px-4 py-3 text-left
+                   hover:bg-slate-50/60 transition"
       >
         <div className="flex items-center gap-2 min-w-0">
-          <svg className="w-4 h-4 text-gray-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-          </svg>
-          <span className="font-medium text-sm text-gray-700">Filtros avanzados</span>
+          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+            <Filter className="w-4 h-4 text-slate-600" strokeWidth={2.2} />
+          </div>
+          <span className="font-medium text-sm text-slate-800">Filtros avanzados</span>
           {hayFiltrosActivos && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold uppercase tracking-wide">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full
+                              bg-blue-100 text-blue-700 text-[10px] font-bold uppercase tracking-wide
+                              border border-blue-200">
+              <Check className="w-3 h-3" strokeWidth={2.5} />
               Activos
             </span>
           )}
         </div>
-        <svg
-          className={`w-4 h-4 text-gray-400 transition-transform shrink-0 ${abierto ? 'rotate-180' : ''}`}
-          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
+        <ChevronDown
+          className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${abierto ? 'rotate-180' : ''}`}
+          strokeWidth={2.5}
+        />
       </button>
 
       {/* Panel colapsable */}
       {abierto && (
-        <div className="mt-4 space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="px-3 sm:px-4 pb-4 pt-1 space-y-4 border-t border-slate-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3">
             {/* Vendedor */}
             <div>
-              <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <UsersIcon className="w-3 h-3 text-slate-400" strokeWidth={2.5} />
                 Vendedor
               </label>
               <select
                 value={vendedorId}
                 onChange={(e) => setVendedorId(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+                className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm bg-white
                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Todos</option>
-                {vendedores.map(v => (
+                {vendedores.map((v) => (
                   <option key={v.id} value={v.id}>{v.nombre}</option>
                 ))}
               </select>
@@ -151,17 +166,18 @@ const FiltrosAvanzados = ({
 
             {/* Tipo de producto */}
             <div>
-              <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <Layers className="w-3 h-3 text-slate-400" strokeWidth={2.5} />
                 Tipo de producto
               </label>
               <select
                 value={tipoProductoSeleccionado}
                 onChange={(e) => setTipoProductoSeleccionado(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+                className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm bg-white
                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Todos</option>
-                {tiposProducto.map(tp => (
+                {tiposProducto.map((tp) => (
                   <option key={tp.id} value={tp.id}>{tp.nombre}</option>
                 ))}
               </select>
@@ -169,12 +185,13 @@ const FiltrosAvanzados = ({
 
             {/* Producto */}
             <div className="sm:col-span-2">
-              <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <Package className="w-3 h-3 text-slate-400" strokeWidth={2.5} />
                 Producto específico
               </label>
               <Select
                 options={productoOptions}
-                value={productoOptions.find(opt => opt.value === productoId) || null}
+                value={productoOptions.find((opt) => opt.value === productoId) || null}
                 onChange={(selected) => setProductoId(selected ? selected.value : '')}
                 isClearable
                 placeholder="Buscar producto..."
@@ -187,17 +204,18 @@ const FiltrosAvanzados = ({
 
             {/* Método de pago */}
             <div>
-              <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <Wallet className="w-3 h-3 text-slate-400" strokeWidth={2.5} />
                 Método de pago
               </label>
               <select
                 value={metodoPago}
                 onChange={(e) => setMetodoPago(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+                className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm bg-white
                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Todos</option>
-                {metodosPago.map(m => (
+                {metodosPago.map((m) => (
                   <option key={m} value={m}>{m}</option>
                 ))}
               </select>
@@ -205,13 +223,14 @@ const FiltrosAvanzados = ({
 
             {/* Tipo de servicio */}
             <div>
-              <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <PieChart className="w-3 h-3 text-slate-400" strokeWidth={2.5} />
                 Tipo de servicio
               </label>
               <select
                 value={tipoServicio}
                 onChange={(e) => setTipoServicio(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+                className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm bg-white
                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Todos</option>
@@ -223,19 +242,20 @@ const FiltrosAvanzados = ({
 
             {/* Categoría */}
             <div>
-              <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <FolderOpen className="w-3 h-3 text-slate-400" strokeWidth={2.5} />
                 Categoría
               </label>
               <select
                 value={categoriaSeleccionada}
                 onChange={(e) => setCategoriaSeleccionada(e.target.value)}
                 disabled={!tipoServicio}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+                className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm bg-white
                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                           disabled:bg-gray-50 disabled:text-gray-400"
+                           disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
               >
                 <option value="">Todas</option>
-                {categorias.map(c => (
+                {categorias.map((c) => (
                   <option key={c.id} value={c.id}>{c.nombre}</option>
                 ))}
               </select>
@@ -243,19 +263,20 @@ const FiltrosAvanzados = ({
 
             {/* Servicio */}
             <div>
-              <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <Tag className="w-3 h-3 text-slate-400" strokeWidth={2.5} />
                 Servicio específico
               </label>
               <select
                 value={servicioSeleccionado}
                 onChange={(e) => setServicioSeleccionado(e.target.value)}
                 disabled={!categoriaSeleccionada}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+                className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm bg-white
                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                           disabled:bg-gray-50 disabled:text-gray-400"
+                           disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
               >
                 <option value="">Todos</option>
-                {servicios.map(s => (
+                {servicios.map((s) => (
                   <option key={s.id} value={s.id}>{s.nombre}</option>
                 ))}
               </select>
@@ -263,43 +284,50 @@ const FiltrosAvanzados = ({
 
             {/* Búsqueda */}
             <div className="sm:col-span-2 lg:col-span-4">
-              <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <SearchIcon className="w-3 h-3 text-slate-400" strokeWidth={2.5} />
                 Búsqueda general
               </label>
-              <input
-                type="text"
-                placeholder="Buscar en número, cliente, cédula o descripción..."
-                value={busquedaTexto}
-                onChange={(e) => setBusquedaTexto(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
-                           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+              <div className="relative">
+                <SearchIcon
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+                  strokeWidth={2.2}
+                />
+                <input
+                  type="text"
+                  placeholder="Buscar en número, cliente, cédula o descripción..."
+                  value={busquedaTexto}
+                  onChange={(e) => setBusquedaTexto(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white
+                             focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
             </div>
           </div>
 
           {/* Botones */}
-          <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-gray-100">
+          <div className="flex flex-col sm:flex-row gap-2 pt-3 border-t border-slate-100">
             <button
               type="button"
               onClick={aplicarFiltros}
-              className="inline-flex items-center justify-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium
-                         hover:bg-blue-700 transition w-full sm:w-auto"
+              className="inline-flex items-center justify-center gap-1.5
+                         bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium
+                         hover:bg-blue-700 active:bg-blue-800 transition
+                         w-full sm:w-auto shadow-sm shadow-blue-600/20"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
+              <Check className="w-4 h-4" strokeWidth={2.5} />
               Aplicar filtros
             </button>
             {hayFiltrosActivos && (
               <button
                 type="button"
                 onClick={limpiarFiltros}
-                className="inline-flex items-center justify-center gap-1.5 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium
-                           hover:bg-gray-200 transition w-full sm:w-auto"
+                className="inline-flex items-center justify-center gap-1.5
+                           bg-slate-100 text-slate-700 px-4 py-2.5 rounded-lg text-sm font-medium
+                           hover:bg-slate-200 active:bg-slate-300 transition
+                           w-full sm:w-auto"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X className="w-4 h-4" strokeWidth={2.5} />
                 Limpiar
               </button>
             )}
@@ -341,7 +369,7 @@ const IncomeReportPage = () => {
   const [tiposProducto, setTiposProducto] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [servicios, setServicios] = useState([]);
-  const metodosPago = METODOS_PAGO.map(m => m.value);
+  const metodosPago = METODOS_PAGO.map((m) => m.value);
 
   /* Facturas */
   const [facturasList, setFacturasList] = useState([]);
@@ -409,7 +437,7 @@ const IncomeReportPage = () => {
       else if (tipo === 'estetica') endpoint = '/tipos-estetica';
       else return;
       const res = await api.get(endpoint);
-      const filtrados = res.data.filter(s => s.categoriaId === parseInt(catId));
+      const filtrados = res.data.filter((s) => s.categoriaId === parseInt(catId));
       setServicios(filtrados);
     } catch (error) {
       toast.error('Error al cargar servicios');
@@ -467,7 +495,7 @@ const IncomeReportPage = () => {
   };
 
   /* ═══════════════════════════════════════════
-     EXPORTACIÓN — idénticas a tu código original
+     EXPORTACIÓN — lógica intacta
      ═══════════════════════════════════════════ */
   const exportToExcel = async () => {
     if (!reporte) return;
@@ -510,12 +538,12 @@ const IncomeReportPage = () => {
     wsResumen.mergeCells(`A${wsResumen.lastRow.number}:B${wsResumen.lastRow.number}`);
     wsResumen.getCell(`A${wsResumen.lastRow.number}`).font = { bold: true, size: 12, color: { argb: 'FF1F4E79' } };
 
-    wsResumen.addRow([`Vendedor: ${vendedores.find(v => v.id === parseInt(vendedorId))?.nombre || 'Todos'}`, '']);
-    wsResumen.addRow([`Producto: ${productos.find(p => p.id === parseInt(productoId))?.nombre || 'Todos'}`, '']);
+    wsResumen.addRow([`Vendedor: ${vendedores.find((v) => v.id === parseInt(vendedorId))?.nombre || 'Todos'}`, '']);
+    wsResumen.addRow([`Producto: ${productos.find((p) => p.id === parseInt(productoId))?.nombre || 'Todos'}`, '']);
     wsResumen.addRow([`Método de pago: ${metodoPago || 'Todos'}`, '']);
     wsResumen.addRow([`Tipo servicio: ${tipoServicio || 'Todos'}`, '']);
-    wsResumen.addRow([`Categoría: ${categorias.find(c => c.id === parseInt(categoriaSeleccionada))?.nombre || 'Todas'}`, '']);
-    wsResumen.addRow([`Servicio específico: ${servicios.find(s => s.id === parseInt(servicioSeleccionado))?.nombre || 'Todos'}`, '']);
+    wsResumen.addRow([`Categoría: ${categorias.find((c) => c.id === parseInt(categoriaSeleccionada))?.nombre || 'Todas'}`, '']);
+    wsResumen.addRow([`Servicio específico: ${servicios.find((s) => s.id === parseInt(servicioSeleccionado))?.nombre || 'Todos'}`, '']);
     wsResumen.addRow([`Búsqueda: ${busquedaTexto || 'Ninguna'}`, '']);
 
     wsResumen.eachRow((row) => {
@@ -538,7 +566,7 @@ const IncomeReportPage = () => {
         { header: 'Vendedor', key: 'vendedor', width: 20 },
       ];
 
-      wsFacturas.addRows(facturasList.map(f => ({
+      wsFacturas.addRows(facturasList.map((f) => ({
         numero: f.numero,
         fecha: new Date(f.fecha).toLocaleDateString(),
         cliente: f.cliente,
@@ -550,14 +578,14 @@ const IncomeReportPage = () => {
         vendedor: f.vendedor,
       })));
 
-      wsFacturas.getRow(1).eachCell(cell => {
+      wsFacturas.getRow(1).eachCell((cell) => {
         cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F81BD' } };
         cell.alignment = { horizontal: 'center' };
         cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
       });
 
-      ['total', 'montoPagado', 'saldoPendiente'].forEach(col => {
+      ['total', 'montoPagado', 'saldoPendiente'].forEach((col) => {
         wsFacturas.getColumn(col).numFmt = '"$"#,##0.00';
       });
 
@@ -588,7 +616,7 @@ const IncomeReportPage = () => {
         ['Días en el rango', est.dias],
         ['Promedio diario de ventas', est.promedioDiario],
       ]);
-      wsStats.getRow(1).eachCell(cell => {
+      wsStats.getRow(1).eachCell((cell) => {
         cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F81BD' } };
         cell.alignment = { horizontal: 'center' };
@@ -620,13 +648,13 @@ const IncomeReportPage = () => {
         { header: '% del total', key: 'porcentaje', width: 12 },
       ];
       const totalVentas = reporte.totalVendido;
-      wsVendedor.addRows(reporte.porVendedor.map(v => ({
+      wsVendedor.addRows(reporte.porVendedor.map((v) => ({
         nombre: v.nombre,
         ventas: v.ventas,
         cantidad: v.cantidadFacturas,
         porcentaje: totalVentas > 0 ? ((v.ventas / totalVentas) * 100).toFixed(2) + '%' : '0%',
       })));
-      wsVendedor.getRow(1).eachCell(cell => {
+      wsVendedor.getRow(1).eachCell((cell) => {
         cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F81BD' } };
         cell.alignment = { horizontal: 'center' };
@@ -656,7 +684,7 @@ const IncomeReportPage = () => {
         total: p.totalVendido,
         porcentaje: totalProductos > 0 ? ((p.totalVendido / totalProductos) * 100).toFixed(2) + '%' : '0%',
       })));
-      wsProducto.getRow(1).eachCell(cell => {
+      wsProducto.getRow(1).eachCell((cell) => {
         cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F81BD' } };
         cell.alignment = { horizontal: 'center' };
@@ -677,13 +705,13 @@ const IncomeReportPage = () => {
         { header: '% del total', key: 'porcentaje', width: 12 },
       ];
       const totalPagado = reporte.totalPagado;
-      wsMetodo.addRows(reporte.porMetodoPago.map(m => ({
+      wsMetodo.addRows(reporte.porMetodoPago.map((m) => ({
         metodo: m.metodo,
         monto: m.montoTotal,
         cantidad: m.cantidadPagos,
         porcentaje: totalPagado > 0 ? ((m.montoTotal / totalPagado) * 100).toFixed(2) + '%' : '0%',
       })));
-      wsMetodo.getRow(1).eachCell(cell => {
+      wsMetodo.getRow(1).eachCell((cell) => {
         cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F81BD' } };
         cell.alignment = { horizontal: 'center' };
@@ -713,7 +741,7 @@ const IncomeReportPage = () => {
         { tipo: 'Estética', monto: reporte.porTipoServicio.ESTETICA || 0, porcentaje: totalServicios > 0 ? ((reporte.porTipoServicio.ESTETICA / totalServicios) * 100).toFixed(2) + '%' : '0%' },
         { tipo: 'Otros', monto: reporte.porTipoServicio.OTROS || 0, porcentaje: totalServicios > 0 ? ((reporte.porTipoServicio.OTROS / totalServicios) * 100).toFixed(2) + '%' : '0%' },
       ]);
-      wsTipo.getRow(1).eachCell(cell => {
+      wsTipo.getRow(1).eachCell((cell) => {
         cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F81BD' } };
         cell.alignment = { horizontal: 'center' };
@@ -754,15 +782,15 @@ const IncomeReportPage = () => {
     const filtros = [
       `Período: ${periodo === 'total' ? 'Todo' : periodo}`,
       `Rango: ${fechaInicio && fechaFin ? `${fechaInicio} a ${fechaFin}` : 'Sin filtro de fecha'}`,
-      `Vendedor: ${vendedores.find(v => v.id === parseInt(vendedorId))?.nombre || 'Todos'}`,
-      `Producto: ${productos.find(p => p.id === parseInt(productoId))?.nombre || 'Todos'}`,
+      `Vendedor: ${vendedores.find((v) => v.id === parseInt(vendedorId))?.nombre || 'Todos'}`,
+      `Producto: ${productos.find((p) => p.id === parseInt(productoId))?.nombre || 'Todos'}`,
       `Método de pago: ${metodoPago || 'Todos'}`,
       `Tipo servicio: ${tipoServicio || 'Todos'}`,
-      `Categoría: ${categorias.find(c => c.id === parseInt(categoriaSeleccionada))?.nombre || 'Todas'}`,
-      `Servicio específico: ${servicios.find(s => s.id === parseInt(servicioSeleccionado))?.nombre || 'Todos'}`,
+      `Categoría: ${categorias.find((c) => c.id === parseInt(categoriaSeleccionada))?.nombre || 'Todas'}`,
+      `Servicio específico: ${servicios.find((s) => s.id === parseInt(servicioSeleccionado))?.nombre || 'Todos'}`,
       `Búsqueda: ${busquedaTexto || 'Ninguna'}`,
     ];
-    filtros.forEach(f => {
+    filtros.forEach((f) => {
       doc.text(f, 14, yOffset);
       yOffset += 5;
     });
@@ -798,7 +826,7 @@ const IncomeReportPage = () => {
       doc.setTextColor(31, 78, 121);
       doc.text('Facturas', 14, yOffset);
       yOffset += 7;
-      const facturasBody = facturasList.map(f => [
+      const facturasBody = facturasList.map((f) => [
         f.numero, new Date(f.fecha).toLocaleDateString(), f.cliente, f.cedula,
         formatCurrency(f.total), formatCurrency(f.montoPagado || 0),
         formatCurrency(f.saldoPendiente || 0), f.estadoPago, f.vendedor,
@@ -851,7 +879,7 @@ const IncomeReportPage = () => {
       doc.text('Ventas por Vendedor', 14, yOffset);
       yOffset += 7;
       const totalVentas = reporte.totalVendido;
-      const vendedorBody = reporte.porVendedor.map(v => [
+      const vendedorBody = reporte.porVendedor.map((v) => [
         v.nombre, formatCurrency(v.ventas), v.cantidadFacturas,
         totalVentas > 0 ? ((v.ventas / totalVentas) * 100).toFixed(2) + '%' : '0%',
       ]);
@@ -896,7 +924,7 @@ const IncomeReportPage = () => {
       doc.text('Métodos de Pago', 14, yOffset);
       yOffset += 7;
       const totalPagado = reporte.totalPagado;
-      const metodoBody = reporte.porMetodoPago.map(m => [
+      const metodoBody = reporte.porMetodoPago.map((m) => [
         m.metodo, formatCurrency(m.montoTotal), m.cantidadPagos,
         totalPagado > 0 ? ((m.montoTotal / totalPagado) * 100).toFixed(2) + '%' : '0%',
       ]);
@@ -941,54 +969,183 @@ const IncomeReportPage = () => {
 
   /* ── Columnas ── */
   const vendedorColumns = [
-    { header: 'Vendedor', accessorKey: 'nombre' },
-    { header: 'Ventas ($)', accessorKey: 'ventas', cell: ({ getValue }) => <span className="block text-right tabular-nums font-medium">{formatCurrency(getValue())}</span> },
-    { header: 'Facturas', accessorKey: 'cantidadFacturas', cell: ({ getValue }) => <span className="block text-right tabular-nums">{getValue()}</span> },
+    {
+      header: 'Vendedor',
+      accessorKey: 'nombre',
+      cell: ({ getValue }) => (
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+            <UsersIcon className="w-4 h-4 text-blue-600" strokeWidth={2.2} />
+          </div>
+          <span className="text-sm font-medium text-slate-800 truncate">{getValue() || '—'}</span>
+        </div>
+      ),
+    },
+    {
+      header: 'Ventas ($)',
+      accessorKey: 'ventas',
+      cell: ({ getValue }) => (
+        <span className="block text-right tabular-nums font-semibold text-emerald-700">
+          {formatCurrency(getValue())}
+        </span>
+      ),
+    },
+    {
+      header: 'Facturas',
+      accessorKey: 'cantidadFacturas',
+      cell: ({ getValue }) => (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-semibold tabular-nums">
+          <Receipt className="w-3 h-3" strokeWidth={2.5} />
+          {getValue()}
+        </span>
+      ),
+    },
   ];
 
   const productoColumns = [
-    { header: 'Producto', accessorKey: 'nombre' },
-    { header: 'Cantidad', accessorKey: 'cantidad', cell: ({ getValue }) => <span className="block text-right tabular-nums">{getValue()}</span> },
-    { header: 'Total ($)', accessorKey: 'totalVendido', cell: ({ getValue }) => <span className="block text-right tabular-nums font-medium">{formatCurrency(getValue())}</span> },
+    {
+      header: 'Producto',
+      accessorKey: 'nombre',
+      cell: ({ getValue }) => (
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+            <Package className="w-4 h-4 text-amber-600" strokeWidth={2.2} />
+          </div>
+          <span className="text-sm font-medium text-slate-800 truncate">{getValue() || '—'}</span>
+        </div>
+      ),
+    },
+    {
+      header: 'Cantidad',
+      accessorKey: 'cantidad',
+      cell: ({ getValue }) => (
+        <span className="block text-right tabular-nums text-slate-700">{getValue()}</span>
+      ),
+    },
+    {
+      header: 'Total ($)',
+      accessorKey: 'totalVendido',
+      cell: ({ getValue }) => (
+        <span className="block text-right tabular-nums font-semibold text-emerald-700">
+          {formatCurrency(getValue())}
+        </span>
+      ),
+    },
   ];
 
   const metodoColumns = [
-    { header: 'Método', accessorKey: 'metodo' },
-    { header: 'Monto ($)', accessorKey: 'montoTotal', cell: ({ getValue }) => <span className="block text-right tabular-nums font-medium">{formatCurrency(getValue())}</span> },
-    { header: 'Pagos', accessorKey: 'cantidadPagos', cell: ({ getValue }) => <span className="block text-right tabular-nums">{getValue()}</span> },
+    {
+      header: 'Método',
+      accessorKey: 'metodo',
+      cell: ({ getValue }) => (
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">
+            <CreditCard className="w-4 h-4 text-violet-600" strokeWidth={2.2} />
+          </div>
+          <span className="text-sm font-medium text-slate-800 truncate">{getValue() || '—'}</span>
+        </div>
+      ),
+    },
+    {
+      header: 'Monto ($)',
+      accessorKey: 'montoTotal',
+      cell: ({ getValue }) => (
+        <span className="block text-right tabular-nums font-semibold text-emerald-700">
+          {formatCurrency(getValue())}
+        </span>
+      ),
+    },
+    {
+      header: 'Pagos',
+      accessorKey: 'cantidadPagos',
+      cell: ({ getValue }) => (
+        <span className="block text-right tabular-nums text-slate-700">{getValue()}</span>
+      ),
+    },
   ];
 
   const facturaColumns = [
-    { header: 'Número', accessorKey: 'numero' },
-    { header: 'Fecha', accessorKey: 'fecha', cell: ({ getValue }) => new Date(getValue()).toLocaleDateString() },
+    {
+      header: 'Número',
+      accessorKey: 'numero',
+      cell: ({ getValue }) => (
+        <span className="font-medium text-sm text-slate-800 tabular-nums">{getValue()}</span>
+      ),
+    },
+    {
+      header: 'Fecha',
+      accessorKey: 'fecha',
+      cell: ({ getValue }) => (
+        <span className="text-sm text-slate-600 tabular-nums">
+          {new Date(getValue()).toLocaleDateString()}
+        </span>
+      ),
+    },
     { header: 'Cliente', accessorKey: 'cliente' },
     { header: 'Cédula', accessorKey: 'cedula' },
-    { header: 'Total', accessorKey: 'total', cell: ({ getValue }) => <span className="block text-right tabular-nums">{formatCurrency(getValue())}</span> },
-    { header: 'Pagado', accessorKey: 'montoPagado', cell: ({ getValue }) => <span className="block text-right tabular-nums text-green-700">{formatCurrency(getValue())}</span> },
-    { header: 'Saldo', accessorKey: 'saldoPendiente', cell: ({ getValue }) => <span className="block text-right tabular-nums text-red-600">{formatCurrency(getValue())}</span> },
-    { header: 'Estado', accessorKey: 'estadoPago' },
+    {
+      header: 'Total',
+      accessorKey: 'total',
+      cell: ({ getValue }) => (
+        <span className="block text-right tabular-nums font-medium text-slate-700">
+          {formatCurrency(getValue())}
+        </span>
+      ),
+    },
+    {
+      header: 'Pagado',
+      accessorKey: 'montoPagado',
+      cell: ({ getValue }) => (
+        <span className="block text-right tabular-nums font-medium text-emerald-700">
+          {formatCurrency(getValue())}
+        </span>
+      ),
+    },
+    {
+      header: 'Saldo',
+      accessorKey: 'saldoPendiente',
+      cell: ({ getValue }) => (
+        <span className="block text-right tabular-nums font-medium text-red-600">
+          {formatCurrency(getValue())}
+        </span>
+      ),
+    },
+    {
+      header: 'Estado',
+      accessorKey: 'estadoPago',
+      cell: ({ getValue }) => {
+        const estado = (getValue() || '').toUpperCase();
+        let cls = 'bg-slate-100 text-slate-700 border-slate-200';
+        if (estado.includes('PENDIENT')) cls = 'bg-amber-100 text-amber-700 border-amber-200';
+        else if (estado.includes('ABONAD')) cls = 'bg-blue-100 text-blue-700 border-blue-200';
+        else if (estado.includes('PAGAD')) cls = 'bg-emerald-100 text-emerald-700 border-emerald-200';
+        else if (estado.includes('ANULAD')) cls = 'bg-red-100 text-red-700 border-red-200';
+        return (
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${cls}`}>
+            {getValue() || '—'}
+          </span>
+        );
+      },
+    },
     { header: 'Vendedor', accessorKey: 'vendedor' },
   ];
 
   /* ── Tabs config ── */
   const tabs = [
-    { id: 'resumen', label: 'Resumen', icon: '📊' },
-    { id: 'facturas', label: 'Facturas', icon: '🧾', count: facturasList.length },
-    { id: 'vendedores', label: 'Vendedores', icon: '👥', count: reporte?.porVendedor?.length },
-    { id: 'productos', label: 'Productos', icon: '📦', count: reporte?.porProducto?.length },
-    { id: 'metodos', label: 'Pagos', icon: '💳', count: reporte?.porMetodoPago?.length },
+    { id: 'resumen', label: 'Resumen', Icon: BarChart3 },
+    { id: 'facturas', label: 'Facturas', Icon: Receipt, count: facturasList.length },
+    { id: 'vendedores', label: 'Vendedores', Icon: UsersIcon, count: reporte?.porVendedor?.length },
+    { id: 'productos', label: 'Productos', Icon: Package, count: reporte?.porProducto?.length },
+    { id: 'metodos', label: 'Pagos', Icon: CreditCard, count: reporte?.porMetodoPago?.length },
   ];
 
   /* ── Loading ── */
   if (loading && !reporte) {
     return (
       <div className="p-3 sm:p-4">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-          <svg className="animate-spin w-8 h-8 mx-auto text-blue-600" viewBox="0 0 24 24" fill="none">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-          <p className="text-sm text-gray-500 mt-3">Cargando reporte...</p>
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-12 text-center">
+          <div className="animate-spin w-8 h-8 mx-auto border-2 border-slate-200 border-t-blue-600 rounded-full" />
+          <p className="text-sm text-slate-500 mt-3">Cargando reporte...</p>
         </div>
       </div>
     );
@@ -997,8 +1154,9 @@ const IncomeReportPage = () => {
   if (!reporte) {
     return (
       <div className="p-3 sm:p-4">
-        <div className="bg-white rounded-xl border-2 border-dashed border-gray-200 p-12 text-center">
-          <p className="text-gray-500 text-sm">No hay datos disponibles</p>
+        <div className="bg-white rounded-xl border-2 border-dashed border-slate-200 p-12 text-center">
+          <AlertTriangle className="w-10 h-10 text-slate-400 mx-auto mb-3" strokeWidth={1.8} />
+          <p className="text-slate-500 text-sm">No hay datos disponibles</p>
         </div>
       </div>
     );
@@ -1007,51 +1165,69 @@ const IncomeReportPage = () => {
   /* ═══════════════ RENDER ═══════════════ */
   return (
     <div className="p-3 sm:p-4">
-      {/* ═══ Header ═══ */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Reporte de Ingresos</h1>
-          <p className="text-xs sm:text-sm text-gray-500">
+      <PageHeader
+        icon="📊"
+        breadcrumbs={[
+          { label: 'Dashboard', to: '/dashboard' },
+          { label: 'Reporte de Ingresos' },
+        ]}
+        title="Reporte de Ingresos"
+        subtitle={
+          <span className="inline-flex items-center gap-2 flex-wrap">
+            <Calendar className="w-3.5 h-3.5" strokeWidth={2.2} />
             {periodo === 'total' ? 'Histórico completo' : `Período ${periodo}`}
-            {fechaInicio && fechaFin && ` · ${fechaInicio} a ${fechaFin}`}
-          </p>
-        </div>
-
-        <div className="flex gap-2 w-full sm:w-auto">
-          <button
-            onClick={exportToExcel}
-            className="inline-flex items-center justify-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium
-                       hover:bg-green-700 transition flex-1 sm:flex-none"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-6m3 6v-4m3 4v-2M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z" />
-            </svg>
-            Excel
-          </button>
-          <button
-            onClick={exportToPDF}
-            className="inline-flex items-center justify-center gap-2 bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium
-                       hover:bg-red-700 transition flex-1 sm:flex-none"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-            </svg>
-            PDF
-          </button>
-        </div>
-      </div>
+            {fechaInicio && fechaFin && (
+              <>
+                <span className="text-slate-300">·</span>
+                <span className="tabular-nums">{fechaInicio} a {fechaFin}</span>
+              </>
+            )}
+          </span>
+        }
+        actions={
+          <>
+            <button
+              onClick={exportToExcel}
+              className="inline-flex items-center justify-center gap-1.5
+                         bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm font-medium
+                         hover:bg-emerald-700 active:bg-emerald-800 transition
+                         shadow-sm shadow-emerald-600/20"
+            >
+              <FileSpreadsheet className="w-4 h-4" strokeWidth={2.2} />
+              Excel
+            </button>
+            <button
+              onClick={exportToPDF}
+              className="inline-flex items-center justify-center gap-1.5
+                         bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium
+                         hover:bg-red-700 active:bg-red-800 transition
+                         shadow-sm shadow-red-600/20"
+            >
+              <FileDown className="w-4 h-4" strokeWidth={2.2} />
+              PDF
+            </button>
+          </>
+        }
+      />
 
       {/* ═══ Filtros de fecha/periodo ═══ */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 mb-4">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200/60 p-3 sm:p-4 mb-4">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="w-1 h-5 bg-blue-600 rounded-full"></span>
+          <Calendar className="w-4 h-4 text-blue-600 shrink-0" strokeWidth={2.2} />
+          <h2 className="text-base font-semibold text-slate-800">
+            Período y rango
+          </h2>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div>
-            <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
+            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
               Período
             </label>
             <select
               value={periodo}
               onChange={(e) => setPeriodo(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+              className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm bg-white
                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="total">Todo</option>
@@ -1063,27 +1239,27 @@ const IncomeReportPage = () => {
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
+            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
               Desde
             </label>
             <input
               type="date"
               value={fechaInicio}
               onChange={(e) => setFechaInicio(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+              className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm bg-white
                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
+            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
               Hasta
             </label>
             <input
               type="date"
               value={fechaFin}
               onChange={(e) => setFechaFin(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm
+              className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm bg-white
                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
@@ -1091,12 +1267,12 @@ const IncomeReportPage = () => {
           <div className="flex items-end">
             <button
               onClick={handleFilterRange}
-              className="w-full inline-flex items-center justify-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium
-                         hover:bg-blue-700 transition"
+              className="w-full inline-flex items-center justify-center gap-1.5
+                         bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium
+                         hover:bg-blue-700 active:bg-blue-800 transition
+                         shadow-sm shadow-blue-600/20"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
+              <Check className="w-4 h-4" strokeWidth={2.5} />
               Aplicar rango
             </button>
           </div>
@@ -1129,57 +1305,50 @@ const IncomeReportPage = () => {
       {/* ═══ Cards de resumen ═══ */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4">
         <StatCard
+          icon={DollarSign}
           label="Total Cobrado"
           value={formatCurrency(reporte.totalIngresos)}
-          color="text-green-700"
-          bg="bg-green-50"
-          border="border-green-100"
-          icon="💰"
+          tone="emerald"
         />
         <StatCard
+          icon={TrendingUp}
           label="Total Vendido"
           value={formatCurrency(reporte.totalVendido)}
-          color="text-blue-700"
-          bg="bg-blue-50"
-          border="border-blue-100"
-          icon="📈"
+          tone="blue"
         />
         <StatCard
+          icon={TrendingDown}
           label="Por Cobrar"
           value={formatCurrency(reporte.totalPendiente)}
-          color="text-red-600"
-          bg="bg-red-50"
-          border="border-red-100"
-          icon="⏳"
+          tone="red"
         />
         <StatCard
+          icon={Target}
           label="Ticket Promedio"
           value={formatCurrency(reporte.ticketPromedio)}
-          color="text-gray-800"
-          bg="bg-gray-50"
-          border="border-gray-100"
-          icon="🎯"
+          tone="violet"
         />
       </div>
 
       {/* ═══ Tabs ═══ */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="border-b border-gray-100 overflow-x-auto">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 overflow-hidden">
+        <div className="border-b border-slate-100 overflow-x-auto">
           <nav className="flex gap-1 px-2 sm:px-3 min-w-max">
-            {tabs.map(tab => {
+            {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
+              const Icon = tab.Icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`relative flex items-center gap-1.5 px-3 py-3 text-sm font-medium whitespace-nowrap transition
-                    ${isActive ? 'text-blue-600' : 'text-gray-500 hover:text-gray-800'}`}
+                    ${isActive ? 'text-blue-600' : 'text-slate-500 hover:text-slate-800'}`}
                 >
-                  <span>{tab.icon}</span>
+                  <Icon className="w-4 h-4 shrink-0" strokeWidth={2.2} />
                   <span>{tab.label}</span>
                   {tab.count > 0 && (
-                    <span className={`ml-0.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-bold
-                      ${isActive ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
+                    <span className={`ml-0.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-bold tabular-nums
+                      ${isActive ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
                       {tab.count}
                     </span>
                   )}
@@ -1195,23 +1364,27 @@ const IncomeReportPage = () => {
         <div className="p-3 sm:p-5">
           {/* ── TAB: Resumen ── */}
           {activeTab === 'resumen' && (
-            <div className="space-y-5">
+            <div className="space-y-6">
               {/* Estadísticas de facturas */}
               {reporte.estadisticasFacturas && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                    <span>📋</span> Estados de facturas
-                  </h3>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-1 h-5 bg-blue-600 rounded-full"></span>
+                    <ClipboardList className="w-4 h-4 text-blue-600 shrink-0" strokeWidth={2.2} />
+                    <h3 className="text-base font-semibold text-slate-800">
+                      Estados de facturas
+                    </h3>
+                  </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-                    <MiniStat label="Pendientes" value={reporte.estadisticasFacturas.pendientes} color="text-yellow-700" bg="bg-yellow-50" />
-                    <MiniStat label="Abonadas" value={reporte.estadisticasFacturas.abonadas} color="text-blue-700" bg="bg-blue-50" />
-                    <MiniStat label="Pagadas" value={reporte.estadisticasFacturas.pagadas} color="text-green-700" bg="bg-green-50" />
-                    <MiniStat label="Anuladas" value={reporte.estadisticasFacturas.anuladas} color="text-red-700" bg="bg-red-50" />
+                    <MiniStat icon={Clock} label="Pendientes" value={reporte.estadisticasFacturas.pendientes} tone="amber" />
+                    <MiniStat icon={Receipt} label="Abonadas" value={reporte.estadisticasFacturas.abonadas} tone="blue" />
+                    <MiniStat icon={CheckCircle2} label="Pagadas" value={reporte.estadisticasFacturas.pagadas} tone="emerald" />
+                    <MiniStat icon={XCircle} label="Anuladas" value={reporte.estadisticasFacturas.anuladas} tone="red" />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 mt-3">
-                    <MiniStat label="Monto anulado" value={formatCurrency(reporte.estadisticasFacturas.montoAnulado)} color="text-red-600" bg="bg-red-50" />
-                    <MiniStat label="Días en el rango" value={reporte.estadisticasFacturas.dias} color="text-gray-700" bg="bg-gray-50" />
-                    <MiniStat label="Promedio diario" value={formatCurrency(reporte.estadisticasFacturas.promedioDiario)} color="text-blue-700" bg="bg-blue-50" />
+                    <MiniStat icon={AlertTriangle} label="Monto anulado" value={formatCurrency(reporte.estadisticasFacturas.montoAnulado)} tone="red" />
+                    <MiniStat icon={Calendar} label="Días en el rango" value={reporte.estadisticasFacturas.dias} tone="slate" />
+                    <MiniStat icon={TrendingUp} label="Promedio diario" value={formatCurrency(reporte.estadisticasFacturas.promedioDiario)} tone="blue" />
                   </div>
                 </div>
               )}
@@ -1219,15 +1392,19 @@ const IncomeReportPage = () => {
               {/* Por categoría de servicio */}
               {reporte.porCategoriaServicio && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                    <span>📂</span> Por categoría de servicio
-                  </h3>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-1 h-5 bg-blue-600 rounded-full"></span>
+                    <FolderOpen className="w-4 h-4 text-blue-600 shrink-0" strokeWidth={2.2} />
+                    <h3 className="text-base font-semibold text-slate-800">
+                      Por categoría de servicio
+                    </h3>
+                  </div>
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3">
-                    <MiniStat label="Consultas" value={formatCurrency(reporte.porCategoriaServicio.consultas || 0)} color="text-blue-700" bg="bg-blue-50" />
-                    <MiniStat label="Operaciones" value={formatCurrency(reporte.porCategoriaServicio.operaciones || 0)} color="text-orange-700" bg="bg-orange-50" />
-                    <MiniStat label="Estudios" value={formatCurrency(reporte.porCategoriaServicio.estudios || 0)} color="text-purple-700" bg="bg-purple-50" />
-                    <MiniStat label="Estética" value={formatCurrency(reporte.porCategoriaServicio.estetica || 0)} color="text-pink-700" bg="bg-pink-50" />
-                    <MiniStat label="Productos" value={formatCurrency(reporte.porCategoriaServicio.productos || 0)} color="text-green-700" bg="bg-green-50" />
+                    <MiniStat icon={FileText} label="Consultas" value={formatCurrency(reporte.porCategoriaServicio.consultas || 0)} tone="blue" />
+                    <MiniStat icon={TrendingUp} label="Operaciones" value={formatCurrency(reporte.porCategoriaServicio.operaciones || 0)} tone="orange" />
+                    <MiniStat icon={FileText} label="Estudios" value={formatCurrency(reporte.porCategoriaServicio.estudios || 0)} tone="violet" />
+                    <MiniStat icon={Target} label="Estética" value={formatCurrency(reporte.porCategoriaServicio.estetica || 0)} tone="pink" />
+                    <MiniStat icon={Package} label="Productos" value={formatCurrency(reporte.porCategoriaServicio.productos || 0)} tone="emerald" />
                   </div>
                 </div>
               )}
@@ -1235,14 +1412,18 @@ const IncomeReportPage = () => {
               {/* Por tipo de servicio */}
               {reporte.porTipoServicio && (
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                    <span>🏷️</span> Por tipo de servicio
-                  </h3>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-1 h-5 bg-blue-600 rounded-full"></span>
+                    <Tag className="w-4 h-4 text-blue-600 shrink-0" strokeWidth={2.2} />
+                    <h3 className="text-base font-semibold text-slate-800">
+                      Por tipo de servicio
+                    </h3>
+                  </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-                    <MiniStat label="Estudios" value={formatCurrency(reporte.porTipoServicio.ESTUDIO || 0)} color="text-purple-700" bg="bg-purple-50" />
-                    <MiniStat label="Operaciones" value={formatCurrency(reporte.porTipoServicio.OPERACION || 0)} color="text-orange-700" bg="bg-orange-50" />
-                    <MiniStat label="Estética" value={formatCurrency(reporte.porTipoServicio.ESTETICA || 0)} color="text-pink-700" bg="bg-pink-50" />
-                    <MiniStat label="Otros" value={formatCurrency(reporte.porTipoServicio.OTROS || 0)} color="text-gray-700" bg="bg-gray-50" />
+                    <MiniStat icon={FileText} label="Estudios" value={formatCurrency(reporte.porTipoServicio.ESTUDIO || 0)} tone="violet" />
+                    <MiniStat icon={TrendingUp} label="Operaciones" value={formatCurrency(reporte.porTipoServicio.OPERACION || 0)} tone="orange" />
+                    <MiniStat icon={Target} label="Estética" value={formatCurrency(reporte.porTipoServicio.ESTETICA || 0)} tone="pink" />
+                    <MiniStat icon={Layers} label="Otros" value={formatCurrency(reporte.porTipoServicio.OTROS || 0)} tone="slate" />
                   </div>
                 </div>
               )}
@@ -1252,21 +1433,27 @@ const IncomeReportPage = () => {
           {/* ── TAB: Facturas ── */}
           {activeTab === 'facturas' && (
             <>
-              <DataTable
-                columns={facturaColumns}
-                data={facturasList}
-                onRowClick={(factura) => navigate(`/facturacion/${factura.id}`)}
-                showGlobalFilter={false}
-                hidePagination
-              />
-              {paginacionFacturas.totalPages > 1 && (
-                <div className="mt-4">
-                  <Pagination
-                    currentPage={page}
-                    totalPages={paginacionFacturas.totalPages}
-                    onPageChange={setPage}
+              {facturasList.length === 0 ? (
+                <EmptyTab icon={Receipt} message="No hay facturas para este período" />
+              ) : (
+                <>
+                  <DataTable
+                    columns={facturaColumns}
+                    data={facturasList}
+                    onRowClick={(factura) => navigate(`/facturacion/${factura.id}`)}
+                    showGlobalFilter={false}
+                    hidePagination
                   />
-                </div>
+                  {paginacionFacturas.totalPages > 1 && (
+                    <div className="mt-4">
+                      <Pagination
+                        currentPage={page}
+                        totalPages={paginacionFacturas.totalPages}
+                        onPageChange={setPage}
+                      />
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}
@@ -1274,39 +1461,27 @@ const IncomeReportPage = () => {
           {/* ── TAB: Vendedores ── */}
           {activeTab === 'vendedores' && (
             reporte.porVendedor.length > 0 ? (
-              <DataTable
-                columns={vendedorColumns}
-                data={reporte.porVendedor}
-                showGlobalFilter={false}
-              />
+              <DataTable columns={vendedorColumns} data={reporte.porVendedor} showGlobalFilter={false} />
             ) : (
-              <EmptyTab icon="👥" message="No hay datos de vendedores para este período" />
+              <EmptyTab icon={UsersIcon} message="No hay datos de vendedores para este período" />
             )
           )}
 
           {/* ── TAB: Productos ── */}
           {activeTab === 'productos' && (
             reporte.porProducto.length > 0 ? (
-              <DataTable
-                columns={productoColumns}
-                data={reporte.porProducto}
-                showGlobalFilter={false}
-              />
+              <DataTable columns={productoColumns} data={reporte.porProducto} showGlobalFilter={false} />
             ) : (
-              <EmptyTab icon="📦" message="No hay productos vendidos en este período" />
+              <EmptyTab icon={Package} message="No hay productos vendidos en este período" />
             )
           )}
 
           {/* ── TAB: Métodos de pago ── */}
           {activeTab === 'metodos' && (
             reporte.porMetodoPago.length > 0 ? (
-              <DataTable
-                columns={metodoColumns}
-                data={reporte.porMetodoPago}
-                showGlobalFilter={false}
-              />
+              <DataTable columns={metodoColumns} data={reporte.porMetodoPago} showGlobalFilter={false} />
             ) : (
-              <EmptyTab icon="💳" message="No hay pagos registrados en este período" />
+              <EmptyTab icon={CreditCard} message="No hay pagos registrados en este período" />
             )
           )}
         </div>
@@ -1315,40 +1490,70 @@ const IncomeReportPage = () => {
   );
 };
 
-/* ── Card de resumen grande ── */
-const StatCard = ({ label, value, color, bg, border, icon }) => (
-  <div className={`${bg} rounded-xl border ${border} p-3 sm:p-4`}>
-    <div className="flex items-start justify-between gap-2">
-      <p className="text-[10px] sm:text-[11px] font-semibold text-gray-500 uppercase tracking-wider leading-tight">
-        {label}
+/* ═══════════════ Card de resumen grande ═══════════════ */
+const StatCard = ({ icon: Icon, label, value, tone = 'slate' }) => {
+  const toneCls = {
+    emerald: { bg: 'bg-emerald-50', border: 'border-emerald-200/60', iconBg: 'bg-emerald-100', iconText: 'text-emerald-600', value: 'text-emerald-700' },
+    blue:    { bg: 'bg-blue-50',    border: 'border-blue-200/60',    iconBg: 'bg-blue-100',    iconText: 'text-blue-600',    value: 'text-blue-700' },
+    red:     { bg: 'bg-red-50',     border: 'border-red-200/60',     iconBg: 'bg-red-100',     iconText: 'text-red-600',     value: 'text-red-700' },
+    violet:  { bg: 'bg-violet-50',  border: 'border-violet-200/60',  iconBg: 'bg-violet-100',  iconText: 'text-violet-600',  value: 'text-violet-700' },
+    slate:   { bg: 'bg-slate-50',   border: 'border-slate-200/60',   iconBg: 'bg-slate-100',   iconText: 'text-slate-600',   value: 'text-slate-700' },
+  }[tone];
+
+  return (
+    <div className={`${toneCls.bg} rounded-xl border ${toneCls.border} p-3 sm:p-4`}>
+      <div className="flex items-start gap-2 sm:gap-3">
+        <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center shrink-0 ${toneCls.iconBg}`}>
+          <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${toneCls.iconText}`} strokeWidth={2.2} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider truncate leading-tight">
+            {label}
+          </p>
+          <p className={`text-sm sm:text-lg font-bold ${toneCls.value} mt-0.5 tabular-nums truncate`}>
+            {value}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ═══════════════ Mini stat ═══════════════ */
+const MiniStat = ({ icon: Icon, label, value, tone = 'slate' }) => {
+  const toneCls = {
+    amber:   { bg: 'bg-amber-50',   border: 'border-amber-100',   icon: 'text-amber-600',   value: 'text-amber-700' },
+    blue:    { bg: 'bg-blue-50',    border: 'border-blue-100',    icon: 'text-blue-600',    value: 'text-blue-700' },
+    emerald: { bg: 'bg-emerald-50', border: 'border-emerald-100', icon: 'text-emerald-600', value: 'text-emerald-700' },
+    red:     { bg: 'bg-red-50',     border: 'border-red-100',     icon: 'text-red-600',     value: 'text-red-700' },
+    violet:  { bg: 'bg-violet-50',  border: 'border-violet-100',  icon: 'text-violet-600',  value: 'text-violet-700' },
+    pink:    { bg: 'bg-pink-50',    border: 'border-pink-100',    icon: 'text-pink-600',    value: 'text-pink-700' },
+    orange:  { bg: 'bg-orange-50',  border: 'border-orange-100',  icon: 'text-orange-600',  value: 'text-orange-700' },
+    slate:   { bg: 'bg-slate-50',   border: 'border-slate-100',   icon: 'text-slate-600',   value: 'text-slate-700' },
+  }[tone];
+
+  return (
+    <div className={`${toneCls.bg} rounded-lg p-2.5 border ${toneCls.border} min-w-0`}>
+      <div className="flex items-center gap-1.5 mb-1">
+        <Icon className={`w-3 h-3 shrink-0 ${toneCls.icon}`} strokeWidth={2.5} />
+        <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider truncate">
+          {label}
+        </p>
+      </div>
+      <p className={`text-sm sm:text-base font-bold ${toneCls.value} tabular-nums truncate`}>
+        {value}
       </p>
-      <span className="text-base sm:text-lg opacity-70 shrink-0">{icon}</span>
     </div>
-    <p className={`text-lg sm:text-2xl font-bold ${color} mt-1 tabular-nums truncate`}>
-      {value}
-    </p>
-  </div>
-);
+  );
+};
 
-/* ── Mini stat ── */
-const MiniStat = ({ label, value, color, bg }) => (
-  <div className={`${bg} rounded-lg p-2.5 border border-gray-100`}>
-    <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider truncate">
-      {label}
-    </p>
-    <p className={`text-sm sm:text-base font-bold ${color} mt-0.5 tabular-nums truncate`}>
-      {value}
-    </p>
-  </div>
-);
-
-/* ── Empty state para tabs ── */
-const EmptyTab = ({ icon, message }) => (
-  <div className="py-12 text-center border-2 border-dashed border-gray-200 rounded-xl">
-    <div className="w-14 h-14 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center text-2xl">
-      {icon}
+/* ═══════════════ Empty state para tabs ═══════════════ */
+const EmptyTab = ({ icon: Icon, message }) => (
+  <div className="py-12 text-center border-2 border-dashed border-slate-200 rounded-xl">
+    <div className="w-14 h-14 mx-auto mb-3 bg-slate-100 rounded-full flex items-center justify-center">
+      <Icon className="w-7 h-7 text-slate-400" strokeWidth={1.8} />
     </div>
-    <p className="text-sm text-gray-500">{message}</p>
+    <p className="text-sm text-slate-500 font-medium px-4">{message}</p>
   </div>
 );
 

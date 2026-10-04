@@ -17,7 +17,14 @@ import { useAuth } from '../../context/AuthContext';
 import { useConfirm } from '../../context/ConfirmContext';
 import toast from 'react-hot-toast';
 import { getImageUrl } from '../../utils/imageUtils';
+import {
+  PawPrint, Pencil, Calendar, FileText, Trash2,
+  Dog, Cat, Heart, User, Users as UsersIcon,
+  AlertTriangle, Plus, ClipboardList, Stethoscope,
+  Syringe, Microscope, Scissors, BedDouble, Activity,
+} from 'lucide-react';
 
+/* ── Hook secciones paginadas ── */
 const useSeccionPaginada = (fetchFunction, mascotaId, pageSize = 10) => {
   const [data, setData] = useState([]);
   const [page, setPage] = useState(1);
@@ -35,15 +42,22 @@ const useSeccionPaginada = (fetchFunction, mascotaId, pageSize = 10) => {
       setTotal(res.data.total);
       setPage(res.data.page);
       setLoaded(true);
-    } catch { toast.error('Error al cargar datos'); }
-    finally { setLoading(false); }
+    } catch {
+      toast.error('Error al cargar datos');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { if (mascotaId) cargarPagina(page); }, [mascotaId, page]);
+  useEffect(() => {
+    if (mascotaId) cargarPagina(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mascotaId, page]);
 
   return { data, page, totalPages, total, loading, loaded, setPage };
 };
 
+/* ═══════════════════════════════════════════════════ */
 const MascotaDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -63,7 +77,7 @@ const MascotaDetailPage = () => {
   const estetica = useSeccionPaginada(getEsteticaByMascota, id);
   const hospitalizaciones = useSeccionPaginada(getHospitalizacionesByMascota, id);
 
-  useEffect(() => { loadMascota(); }, [id]);
+  useEffect(() => { loadMascota(); /* eslint-disable-next-line */ }, [id]);
 
   const loadMascota = async () => {
     try {
@@ -71,12 +85,18 @@ const MascotaDetailPage = () => {
       const res = await getMascota(id);
       setMascota(res.data);
       setImageError(false);
-    } catch { toast.error('Error al cargar la mascota'); }
-    finally { setLoadingMascota(false); }
+    } catch {
+      toast.error('Error al cargar la mascota');
+    } finally {
+      setLoadingMascota(false);
+    }
   };
 
   const handleDelete = async () => {
-    if (!isAdmin) { toast.error('No tienes permiso para eliminar'); return; }
+    if (!isAdmin) {
+      toast.error('No tienes permiso para eliminar');
+      return;
+    }
     const ok = await confirm({
       title: 'Eliminar mascota',
       message: `¿Eliminar a ${mascota.nombre}? Esta acción no se puede deshacer.`,
@@ -88,9 +108,12 @@ const MascotaDetailPage = () => {
       await deleteMascota(id);
       toast.success('Mascota eliminada');
       navigate(`/clientes/${mascota.dueno?.id}`);
-    } catch { toast.error('Error al eliminar'); }
+    } catch {
+      toast.error('Error al eliminar');
+    }
   };
 
+  /* ── Columnas DataTable ── */
   const columnsConsultas = [
     { header: 'Fecha', accessorKey: 'fecha', cell: ({ getValue }) => new Date(getValue()).toLocaleDateString() },
     { header: 'Motivo', accessorKey: 'motivo' },
@@ -137,28 +160,22 @@ const MascotaDetailPage = () => {
   ];
 
   const tabs = [
-    { id: 'consultas', label: 'Consultas', icon: '🩺', sec: consultas, columns: columnsConsultas, basePath: '/consultas', newPath: '/consultas/nueva' },
-    { id: 'vacunaciones', label: 'Vacunas', icon: '💉', sec: vacunaciones, columns: columnsVacunas, basePath: '/vacunaciones', newPath: '/vacunaciones/nueva' },
-    { id: 'estudios', label: 'Estudios', icon: '🔬', sec: estudios, columns: columnsEstudios, basePath: '/estudios', newPath: '/estudios/nueva' },
-    { id: 'operaciones', label: 'Operaciones', icon: '⚕️', sec: operaciones, columns: columnsOperaciones, basePath: '/operaciones', newPath: '/operaciones/nueva' },
-    { id: 'estetica', label: 'Estética', icon: '✂️', sec: estetica, columns: columnsEstetica, basePath: '/estetica', newPath: '/estetica/nueva' },
-    { id: 'hospitalizaciones', label: 'Hospitalización', icon: '🏥', sec: hospitalizaciones, columns: columnsHospitalizaciones, basePath: '/hospitalizaciones', newPath: '/hospitalizaciones/nueva' },
+    { id: 'consultas', label: 'Consultas', Icon: Stethoscope, sec: consultas, columns: columnsConsultas, basePath: '/consultas', newPath: '/consultas/nueva' },
+    { id: 'vacunaciones', label: 'Vacunas', Icon: Syringe, sec: vacunaciones, columns: columnsVacunas, basePath: '/vacunaciones', newPath: '/vacunaciones/nueva' },
+    { id: 'estudios', label: 'Estudios', Icon: Microscope, sec: estudios, columns: columnsEstudios, basePath: '/estudios', newPath: '/estudios/nueva' },
+    { id: 'operaciones', label: 'Operaciones', Icon: Activity, sec: operaciones, columns: columnsOperaciones, basePath: '/operaciones', newPath: '/operaciones/nueva' },
+    { id: 'estetica', label: 'Estética', Icon: Scissors, sec: estetica, columns: columnsEstetica, basePath: '/estetica', newPath: '/estetica/nueva' },
+    { id: 'hospitalizaciones', label: 'Hospitalización', Icon: BedDouble, sec: hospitalizaciones, columns: columnsHospitalizaciones, basePath: '/hospitalizaciones', newPath: '/hospitalizaciones/nueva' },
   ];
 
-  const activeTabCfg = tabs.find(t => t.id === activeTab);
+  const activeTabCfg = tabs.find((t) => t.id === activeTab);
 
   if (loadingMascota) {
     return (
       <div className="p-3 sm:p-4 max-w-6xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 animate-pulse">
-          <div className="flex gap-4">
-            <div className="w-24 h-24 bg-gray-200 rounded-xl shrink-0" />
-            <div className="flex-1 space-y-3">
-              <div className="h-6 bg-gray-200 rounded w-1/3" />
-              <div className="h-4 bg-gray-200 rounded w-1/4" />
-              <div className="h-4 bg-gray-200 rounded w-1/2" />
-            </div>
-          </div>
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-12 text-center">
+          <div className="animate-spin w-8 h-8 mx-auto border-2 border-slate-200 border-t-cyan-600 rounded-full" />
+          <p className="text-sm text-slate-500 mt-3">Cargando...</p>
         </div>
       </div>
     );
@@ -167,14 +184,21 @@ const MascotaDetailPage = () => {
   if (!mascota) {
     return (
       <div className="p-3 sm:p-4 max-w-6xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
-          <p className="text-gray-500">Mascota no encontrada</p>
-          <button onClick={() => navigate('/clientes')} className="mt-3 text-blue-600 hover:text-blue-800 text-sm font-medium">← Volver a clientes</button>
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-12 text-center">
+          <AlertTriangle className="w-10 h-10 text-slate-400 mx-auto mb-3" strokeWidth={1.8} />
+          <p className="text-slate-500 text-sm">Mascota no encontrada</p>
+          <button
+            onClick={() => navigate('/clientes')}
+            className="mt-3 text-cyan-600 hover:text-cyan-800 text-sm font-medium"
+          >
+            ← Volver a clientes
+          </button>
         </div>
       </div>
     );
   }
 
+  /* ═══════════════ RENDER ═══════════════ */
   return (
     <div className="p-3 sm:p-4 max-w-6xl mx-auto">
       <PageHeader
@@ -185,24 +209,59 @@ const MascotaDetailPage = () => {
           { label: mascota.nombre },
         ]}
         title={mascota.nombre}
-        subtitle={`${mascota.especie?.nombre || ''}${mascota.raza?.nombre ? ` · ${mascota.raza.nombre}` : ''}`}
+        subtitle={
+          <span className="inline-flex items-center gap-2 flex-wrap">
+            <Dog className="w-3.5 h-3.5" strokeWidth={2.2} />
+            {mascota.especie?.nombre || 'Sin especie'}
+            {mascota.raza?.nombre && (
+              <>
+                <span className="text-slate-300">·</span>
+                <span>{mascota.raza.nombre}</span>
+              </>
+            )}
+          </span>
+        }
         actions={
           <>
-            <button onClick={() => navigate(`/mascotas/${id}/editar`)} className="inline-flex items-center justify-center gap-1.5 bg-amber-500 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-amber-600 transition">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+            <button
+              onClick={() => navigate(`/mascotas/${id}/editar`)}
+              className="inline-flex items-center justify-center gap-1.5
+                         bg-white text-slate-700 border border-slate-200
+                         px-3 py-2 rounded-lg text-sm font-medium
+                         hover:bg-slate-50 hover:border-slate-300 transition"
+            >
+              <Pencil className="w-4 h-4" strokeWidth={2.2} />
               Editar
             </button>
-            <button onClick={() => navigate(`/citas/nueva?mascotaId=${id}`)} className="inline-flex items-center justify-center gap-1.5 bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            <button
+              onClick={() => navigate(`/citas/nueva?mascotaId=${id}`)}
+              className="inline-flex items-center justify-center gap-1.5
+                         bg-cyan-600 text-white px-3 py-2 rounded-lg text-sm font-medium
+                         hover:bg-cyan-700 active:bg-cyan-800 transition
+                         shadow-sm shadow-cyan-600/20"
+            >
+              <Calendar className="w-4 h-4" strokeWidth={2.2} />
               Cita
             </button>
-            <button onClick={() => navigate(`/mascotas/${id}/historial`)} className="inline-flex items-center justify-center gap-1.5 bg-purple-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 transition">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            <button
+              onClick={() => navigate(`/mascotas/${id}/historial`)}
+              className="inline-flex items-center justify-center gap-1.5
+                         bg-violet-600 text-white px-3 py-2 rounded-lg text-sm font-medium
+                         hover:bg-violet-700 active:bg-violet-800 transition
+                         shadow-sm shadow-violet-600/20"
+            >
+              <FileText className="w-4 h-4" strokeWidth={2.2} />
               Historial
             </button>
             {isAdmin && (
-              <button onClick={handleDelete} className="inline-flex items-center justify-center gap-1.5 bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3" /></svg>
+              <button
+                onClick={handleDelete}
+                className="inline-flex items-center justify-center gap-1.5
+                           bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium
+                           hover:bg-red-700 active:bg-red-800 transition
+                           shadow-sm shadow-red-600/20"
+              >
+                <Trash2 className="w-4 h-4" strokeWidth={2.2} />
                 Eliminar
               </button>
             )}
@@ -210,109 +269,164 @@ const MascotaDetailPage = () => {
         }
       />
 
-      {/* Info */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5 mb-4">
-        <div className="flex flex-col sm:flex-row gap-4">
+      {/* ═══ Card: Info mascota ═══ */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200/60 p-4 sm:p-6 mb-4">
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
+          {/* Foto / avatar */}
           <div className="shrink-0 mx-auto sm:mx-0">
             {mascota.foto && !imageError ? (
               <img
                 src={getImageUrl(mascota.foto)}
                 alt={mascota.nombre}
-                className="w-24 h-24 sm:w-28 sm:h-28 object-cover rounded-xl border border-gray-200 shadow-sm"
+                className="w-24 h-24 sm:w-28 sm:h-28 object-cover rounded-2xl border border-slate-200 shadow-sm"
                 onError={() => setImageError(true)}
               />
             ) : (
-              <div className="w-24 h-24 sm:w-28 sm:h-28 bg-gradient-to-br from-blue-100 to-blue-50 rounded-xl flex items-center justify-center text-4xl border border-gray-100">🐾</div>
+              <div className="w-24 h-24 sm:w-28 sm:h-28 bg-gradient-to-br from-cyan-100 to-cyan-50 rounded-2xl flex items-center justify-center border border-cyan-100">
+                <PawPrint className="w-12 h-12 text-cyan-500" strokeWidth={1.8} />
+              </div>
             )}
           </div>
 
+          {/* Datos */}
           <div className="flex-1 min-w-0">
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-3">
-              <InfoItem label="Especie" value={mascota.especie?.nombre} />
-              <InfoItem label="Raza" value={mascota.raza?.nombre} />
-              <InfoItem label="Sexo" value={mascota.sexo === 'M' ? 'Masculino' : 'Femenino'} />
-              <InfoItem label="Nacimiento" value={new Date(mascota.fechaNacimiento).toLocaleDateString()} />
-              <InfoItem label="Edad aprox." value={calcularEdad(mascota.fechaNacimiento)} />
-
-              <div className="col-span-2 lg:col-span-1">
-                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Dueño</p>
-                <Link to={`/clientes/${mascota.dueno?.id}`} className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline">
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  {mascota.dueno?.nombre}
-                </Link>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <InfoBlock
+                icon={Dog}
+                label="Especie"
+                value={mascota.especie?.nombre}
+                tone="cyan"
+              />
+              <InfoBlock
+                icon={Cat}
+                label="Raza"
+                value={mascota.raza?.nombre}
+                tone="cyan"
+              />
+              <InfoBlock
+                icon={Heart}
+                label="Sexo"
+                value={mascota.sexo === 'M' ? 'Masculino' : mascota.sexo === 'F' ? 'Femenino' : '—'}
+                tone="cyan"
+              />
+              <InfoBlock
+                icon={Calendar}
+                label="Nacimiento"
+                value={mascota.fechaNacimiento ? new Date(mascota.fechaNacimiento).toLocaleDateString() : '—'}
+                tone="cyan"
+              />
+              <InfoBlock
+                icon={Activity}
+                label="Edad aprox."
+                value={calcularEdad(mascota.fechaNacimiento)}
+                tone="cyan"
+              />
+              <div className="min-w-0">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-cyan-50 text-cyan-600">
+                    <UsersIcon className="w-4 h-4" strokeWidth={2.2} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                      Dueño
+                    </p>
+                    <Link
+                      to={`/clientes/${mascota.dueno?.id}`}
+                      className="inline-flex items-center gap-1 text-sm font-medium text-cyan-700 hover:text-cyan-900 hover:underline mt-0.5"
+                    >
+                      {mascota.dueno?.nombre || '—'}
+                    </Link>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="border-b border-gray-100 overflow-x-auto">
+      {/* ═══ Tabs ═══ */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200/60 overflow-hidden">
+        {/* Nav tabs */}
+        <div className="border-b border-slate-100 overflow-x-auto">
           <nav className="flex gap-1 px-2 sm:px-3 min-w-max">
-            {tabs.map(tab => {
+            {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
+              const Icon = tab.Icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`relative flex items-center gap-1.5 px-3 py-3 text-sm font-medium whitespace-nowrap transition ${isActive ? 'text-blue-600' : 'text-gray-500 hover:text-gray-800'}`}
+                  className={`relative flex items-center gap-1.5 px-3 py-3 text-sm font-medium whitespace-nowrap transition ${
+                    isActive ? 'text-cyan-600' : 'text-slate-500 hover:text-slate-800'
+                  }`}
                 >
-                  <span>{tab.icon}</span>
+                  <Icon className="w-4 h-4 shrink-0" strokeWidth={2.2} />
                   <span>{tab.label}</span>
                   {tab.sec.total > 0 && (
-                    <span className={`ml-0.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-bold ${isActive ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
+                    <span
+                      className={`ml-0.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-bold tabular-nums ${
+                        isActive ? 'bg-cyan-100 text-cyan-700' : 'bg-slate-100 text-slate-500'
+                      }`}
+                    >
                       {tab.sec.total}
                     </span>
                   )}
-                  {isActive && <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-blue-600 rounded-full" />}
+                  {isActive && (
+                    <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-cyan-600 rounded-full" />
+                  )}
                 </button>
               );
             })}
           </nav>
         </div>
 
+        {/* Contenido tab activo */}
         <div className="p-3 sm:p-5">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-            <div>
-              <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2">
-                <span>{activeTabCfg.icon}</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-1 h-5 bg-cyan-600 rounded-full"></span>
+              <activeTabCfg.Icon className="w-4 h-4 text-cyan-600 shrink-0" strokeWidth={2.2} />
+              <h2 className="text-base font-semibold text-slate-800">
                 {activeTabCfg.label}
-                {activeTabCfg.sec.total > 0 && (
-                  <span className="text-xs font-normal text-gray-400">({activeTabCfg.sec.total})</span>
-                )}
               </h2>
-              <p className="text-xs text-gray-500 mt-0.5">Registros asociados a {mascota.nombre}</p>
+              {activeTabCfg.sec.total > 0 && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-semibold tabular-nums">
+                  {activeTabCfg.sec.total}
+                </span>
+              )}
             </div>
 
             <button
               onClick={() => navigate(`${activeTabCfg.newPath}?mascotaId=${id}`)}
-              className="inline-flex items-center justify-center gap-1.5 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition w-full sm:w-auto"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5
+                         bg-cyan-600 text-white px-3.5 py-2 rounded-lg text-sm font-medium
+                         hover:bg-cyan-700 active:bg-cyan-800 transition
+                         shadow-sm shadow-cyan-600/20"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+              <Plus className="w-4 h-4" strokeWidth={2.5} />
               Nuevo
             </button>
           </div>
 
           {activeTabCfg.sec.loading ? (
-            <div className="py-8 text-center">
-              <svg className="animate-spin w-6 h-6 mx-auto text-blue-600" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              <p className="text-sm text-gray-500 mt-2">Cargando...</p>
+            <div className="py-10 text-center">
+              <div className="animate-spin w-8 h-8 mx-auto border-2 border-slate-200 border-t-cyan-600 rounded-full" />
+              <p className="text-sm text-slate-500 mt-3">Cargando...</p>
             </div>
           ) : activeTabCfg.sec.data.length === 0 ? (
-            <div className="py-10 text-center border-2 border-dashed border-gray-200 rounded-xl">
-              <div className="w-12 h-12 mx-auto mb-2 bg-gray-100 rounded-full flex items-center justify-center text-2xl">{activeTabCfg.icon}</div>
-              <p className="text-sm text-gray-500">No hay {activeTabCfg.label.toLowerCase()} registradas</p>
+            <div className="py-10 text-center border-2 border-dashed border-slate-200 rounded-xl">
+              <div className="w-14 h-14 mx-auto mb-3 bg-slate-100 rounded-full flex items-center justify-center">
+                <activeTabCfg.Icon className="w-7 h-7 text-slate-400" strokeWidth={1.8} />
+              </div>
+              <p className="text-sm text-slate-500 font-medium px-4">
+                No hay {activeTabCfg.label.toLowerCase()} registradas
+              </p>
               <button
                 onClick={() => navigate(`${activeTabCfg.newPath}?mascotaId=${id}`)}
-                className="mt-3 text-blue-600 hover:text-blue-800 text-sm font-medium"
+                className="mt-3 text-cyan-600 hover:text-cyan-800 text-sm font-medium inline-flex items-center gap-1"
               >
-                + Registrar el primero
+                <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
+                Registrar el primero
               </button>
             </div>
           ) : (
@@ -326,7 +440,11 @@ const MascotaDetailPage = () => {
               />
               {activeTabCfg.sec.totalPages > 1 && (
                 <div className="mt-4">
-                  <Pagination currentPage={activeTabCfg.sec.page} totalPages={activeTabCfg.sec.totalPages} onPageChange={activeTabCfg.sec.setPage} />
+                  <Pagination
+                    currentPage={activeTabCfg.sec.page}
+                    totalPages={activeTabCfg.sec.totalPages}
+                    onPageChange={activeTabCfg.sec.setPage}
+                  />
                 </div>
               )}
             </>
@@ -337,13 +455,31 @@ const MascotaDetailPage = () => {
   );
 };
 
-const InfoItem = ({ label, value }) => (
-  <div className="min-w-0">
-    <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
-    <p className="text-sm font-medium text-gray-800 truncate" title={value}>{value || '—'}</p>
-  </div>
-);
+/* ── Bloque de info reutilizable ── */
+const InfoBlock = ({ icon: Icon, label, value, tone = 'slate' }) => {
+  const toneCls = {
+    cyan: 'bg-cyan-50 text-cyan-600',
+    slate: 'bg-slate-100 text-slate-500',
+  }[tone];
 
+  return (
+    <div className="flex items-start gap-3 min-w-0">
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${toneCls}`}>
+        <Icon className="w-4 h-4" strokeWidth={2.2} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+          {label}
+        </p>
+        <p className="text-sm font-medium text-slate-800 mt-0.5 break-words">
+          {value || '—'}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+/* ── Cálculo de edad ── */
 const calcularEdad = (fechaNacimiento) => {
   if (!fechaNacimiento) return '—';
   const hoy = new Date();

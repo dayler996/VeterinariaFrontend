@@ -1,15 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getTrabajadores, createTrabajador, updateTrabajador } from '../../services/trabajadorService';
 import { getCargos } from '../../services/cargoService';
 import { DataTable } from '../../components/common/DataTable';
 import { Modal } from '../../components/common/Modal';
+import PageHeader from '../../components/common/PageHeader';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import ImageUploader from '../../components/common/ImageUploader';
 import toast from 'react-hot-toast';
 import { getImageUrl } from '../../utils/imageUtils';
+import {
+  UserCog, UserPlus, Pencil, Power, Search as SearchIcon, X,
+  Check, AlertTriangle, CreditCard, Cake, Briefcase, Camera,
+  Heart, Building2, Shield, CheckCircle2, ClipboardList,
+  Users as UsersIcon, Filter, User as UserIcon,
+} from 'lucide-react';
 
 /* ── Schema ── */
 const trabajadorSchema = z.object({
@@ -24,23 +31,6 @@ const trabajadorSchema = z.object({
   foto: z.string().optional(),
   activo: z.boolean().default(true),
 });
-
-/* ── Iconos ── */
-const EditIcon = ({ className = 'w-4 h-4' }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-  </svg>
-);
-const PowerIcon = ({ className = 'w-4 h-4' }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M18.36 6.64A9 9 0 11 5.64 6.64M12 2v10" />
-  </svg>
-);
-const SearchIcon = ({ className = 'w-4 h-4' }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
-  </svg>
-);
 
 /* ═══════════════════════════════════════════════════ */
 const TrabajadoresPage = () => {
@@ -64,9 +54,10 @@ const TrabajadoresPage = () => {
   });
 
   const foto = watch('foto');
+  const activoWatch = watch('activo');
 
   /* ── Carga ── */
-  useEffect(() => { loadData(); }, [mostrarInactivos]);
+  useEffect(() => { loadData(); /* eslint-disable-next-line */ }, [mostrarInactivos]);
 
   const loadData = async () => {
     try {
@@ -138,19 +129,21 @@ const TrabajadoresPage = () => {
   };
 
   /* ── Filtrado ── */
-  const trabajadoresFiltrados = trabajadores
-    .filter(t => !filtroCargo || t.cargoId === parseInt(filtroCargo))
-    .filter(t => {
-      if (!busqueda) return true;
-      const q = busqueda.toLowerCase();
-      return (
-        t.nombre?.toLowerCase().includes(q) ||
-        t.cedula?.toLowerCase().includes(q) ||
-        t.cargo?.nombre?.toLowerCase().includes(q)
-      );
-    });
+  const trabajadoresFiltrados = useMemo(() => {
+    return trabajadores
+      .filter((t) => !filtroCargo || t.cargoId === parseInt(filtroCargo))
+      .filter((t) => {
+        if (!busqueda.trim()) return true;
+        const q = busqueda.toLowerCase().trim();
+        return (
+          t.nombre?.toLowerCase().includes(q) ||
+          t.cedula?.toLowerCase().includes(q) ||
+          t.cargo?.nombre?.toLowerCase().includes(q)
+        );
+      });
+  }, [trabajadores, busqueda, filtroCargo]);
 
-  const hayFiltros = busqueda || filtroCargo;
+  const hayFiltros = busqueda.trim() || filtroCargo;
 
   /* ── Columnas ── */
   const columns = [
@@ -159,23 +152,29 @@ const TrabajadoresPage = () => {
       accessorKey: 'nombre',
       cell: ({ row }) => {
         const t = row.original;
+        const activo = t.activo;
         return (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
             {t.foto ? (
               <img
                 src={getImageUrl(t.foto)}
                 alt={t.nombre}
-                className="w-10 h-10 rounded-full object-cover border border-gray-200 shrink-0"
+                className={`w-9 h-9 rounded-lg object-cover border shrink-0
+                  ${activo ? 'border-slate-200' : 'border-slate-100 opacity-60'}`}
                 onError={(e) => { e.target.style.display = 'none'; }}
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center shrink-0 border border-gray-100">
-                <span className="text-lg">👤</span>
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0
+                ${activo ? 'bg-slate-100' : 'bg-slate-50'}`}>
+                <UserCog
+                  className={`w-4 h-4 ${activo ? 'text-slate-600' : 'text-slate-400'}`}
+                  strokeWidth={2.2}
+                />
               </div>
             )}
             <div className="min-w-0">
-              <p className="font-medium text-sm text-gray-800 truncate">{t.nombre}</p>
-              <p className="text-[11px] text-gray-400">CI: {t.cedula}</p>
+              <p className="text-sm font-medium text-slate-800 truncate">{t.nombre}</p>
+              <p className="text-[11px] text-slate-400 tabular-nums">CI: {t.cedula}</p>
             </div>
           </div>
         );
@@ -186,9 +185,12 @@ const TrabajadoresPage = () => {
       accessorKey: 'cargo.nombre',
       cell: ({ getValue }) => {
         const v = getValue();
-        if (!v) return <span className="text-xs text-gray-400">—</span>;
+        if (!v) return <span className="text-xs text-slate-400">—</span>;
         return (
-          <span className="inline-block px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[11px] font-semibold">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md
+                            bg-slate-100 text-slate-700 border border-slate-200
+                            text-[11px] font-semibold">
+            <Briefcase className="w-3 h-3" strokeWidth={2.5} />
             {v}
           </span>
         );
@@ -199,10 +201,11 @@ const TrabajadoresPage = () => {
       accessorKey: 'sexo',
       cell: ({ getValue }) => {
         const v = getValue();
+        const isM = v === 'M';
         return (
-          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold
-            ${v === 'M' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
-            {v === 'M' ? '♂ M' : '♀ F'}
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold
+            ${isM ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
+            {isM ? '♂ M' : '♀ F'}
           </span>
         );
       },
@@ -210,116 +213,197 @@ const TrabajadoresPage = () => {
     {
       header: 'Estado',
       accessorKey: 'activo',
-      cell: ({ getValue }) => (
-        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${
-          getValue() ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-        }`}>
-          {getValue() ? 'Activo' : 'Inactivo'}
-        </span>
-      ),
+      cell: ({ getValue }) => {
+        const activo = getValue();
+        return (
+          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide
+            ${activo ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
+            {activo ? (
+              <>
+                <CheckCircle2 className="w-3 h-3" strokeWidth={2.5} />
+                Activo
+              </>
+            ) : (
+              <>
+                <Power className="w-3 h-3" strokeWidth={2.5} />
+                Inactivo
+              </>
+            )}
+          </span>
+        );
+      },
     },
     {
       id: 'acciones',
       header: 'Acciones',
       cell: ({ row }) => (
-        <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => navigate(`/trabajadores/${row.original.id}/editar`)}
             className="p-2 rounded-lg text-blue-600 hover:bg-blue-50 transition"
             title="Editar"
           >
-            <EditIcon />
+            <Pencil className="w-4 h-4" strokeWidth={2.2} />
           </button>
           <button
             onClick={() => handleToggleActivo(row.original)}
             className={`p-2 rounded-lg transition
               ${row.original.activo
                 ? 'text-red-600 hover:bg-red-50'
-                : 'text-green-600 hover:bg-green-50'}`}
+                : 'text-emerald-600 hover:bg-emerald-50'}`}
             title={row.original.activo ? 'Desactivar' : 'Activar'}
           >
-            <PowerIcon />
+            <Power className="w-4 h-4" strokeWidth={2.2} />
           </button>
         </div>
       ),
     },
   ];
 
-  if (loading) return <div className="text-center p-4 text-gray-500">Cargando...</div>;
+  if (loading) {
+    return (
+      <div className="p-3 sm:p-4">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200/60 p-12 text-center">
+          <div className="animate-spin w-8 h-8 mx-auto border-2 border-slate-200 border-t-slate-700 rounded-full" />
+          <p className="text-sm text-slate-500 mt-3">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
 
   /* ═══════════════ RENDER ═══════════════ */
   return (
     <div className="p-3 sm:p-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Personal</h1>
-          <p className="text-xs sm:text-sm text-gray-500">
+      <PageHeader
+        icon="👨‍⚕️"
+        breadcrumbs={[
+          { label: 'Dashboard', to: '/dashboard' },
+          { label: 'Personal' },
+        ]}
+        title="Personal"
+        subtitle={
+          <span className="inline-flex items-center gap-2 flex-wrap">
+            <UserCog className="w-3.5 h-3.5" strokeWidth={2.2} />
             {trabajadoresFiltrados.length} de {trabajadores.length} trabajador{trabajadores.length !== 1 && 'es'}
-          </p>
+            {hayFiltros && <span className="text-slate-600 font-medium"> (filtrados)</span>}
+          </span>
+        }
+        actions={
+          <>
+            <label className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 cursor-pointer hover:bg-slate-50 transition select-none">
+              <input
+                type="checkbox"
+                checked={mostrarInactivos}
+                onChange={(e) => setMostrarInactivos(e.target.checked)}
+                className="w-4 h-4 text-slate-700 border-slate-300 rounded focus:ring-slate-500"
+              />
+              <span className="whitespace-nowrap">Inactivos</span>
+            </label>
+            <button
+              onClick={handleNew}
+              className="inline-flex items-center justify-center gap-1.5
+                         bg-slate-800 text-white px-3 py-2 rounded-lg text-sm font-medium
+                         hover:bg-slate-900 active:bg-black transition
+                         shadow-sm shadow-slate-800/20"
+            >
+              <UserPlus className="w-4 h-4" strokeWidth={2.5} />
+              Nuevo Trabajador
+            </button>
+          </>
+        }
+      />
+
+      {/* ═══ Banner info ═══ */}
+      <div className="mb-4 p-4 rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-white flex items-center gap-3">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center shadow-lg shadow-slate-700/25 shrink-0">
+          <UsersIcon className="w-6 h-6 text-white" strokeWidth={2.2} />
         </div>
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          <label className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 cursor-pointer hover:bg-gray-50">
-            <input
-              type="checkbox"
-              checked={mostrarInactivos}
-              onChange={(e) => setMostrarInactivos(e.target.checked)}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            Inactivos
-          </label>
-          <button
-            onClick={handleNew}
-            className="inline-flex items-center justify-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium
-                       hover:bg-blue-700 transition w-full sm:w-auto"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            Nuevo Trabajador
-          </button>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
+            Equipo de trabajo
+          </p>
+          <p className="text-base font-bold text-slate-800 mt-0.5 truncate">
+            Personal del sistema
+          </p>
+          <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5">
+            <Shield className="w-3 h-3 shrink-0" strokeWidth={2.2} />
+            Cada trabajador tiene un cargo que define sus permisos
+          </p>
         </div>
       </div>
 
-      {/* Filtros */}
+      {/* ═══ Filtros ═══ */}
       {trabajadores.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 mb-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                <SearchIcon />
-              </span>
-              <input
-                type="text"
-                placeholder="Buscar por nombre, cédula o cargo..."
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm
-                           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200/60 p-3 sm:p-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Búsqueda */}
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <SearchIcon className="w-3 h-3 text-slate-400" strokeWidth={2.5} />
+                Búsqueda
+              </label>
+              <div className="relative">
+                <SearchIcon
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+                  strokeWidth={2.2}
+                />
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre, cédula o cargo..."
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                  className="w-full pl-9 pr-9 py-2.5 border border-slate-300 rounded-lg text-sm
+                             focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500"
+                />
+                {busqueda && (
+                  <button
+                    type="button"
+                    onClick={() => setBusqueda('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md
+                               text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+                    aria-label="Limpiar búsqueda"
+                  >
+                    <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+                  </button>
+                )}
+              </div>
             </div>
-            <select
-              value={filtroCargo}
-              onChange={(e) => setFiltroCargo(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm
-                         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Todos los cargos</option>
-              {cargos.map(c => (
-                <option key={c.id} value={c.id}>{c.nombre}</option>
-              ))}
-            </select>
+
+            {/* Filtro por cargo */}
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                <Filter className="w-3 h-3 text-slate-400" strokeWidth={2.5} />
+                Cargo
+              </label>
+              <div className="relative">
+                <Briefcase
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+                  strokeWidth={2.2}
+                />
+                <select
+                  value={filtroCargo}
+                  onChange={(e) => setFiltroCargo(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white appearance-none cursor-pointer
+                             focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500
+                             hover:border-slate-400 transition"
+                >
+                  <option value="">Todos los cargos</option>
+                  {cargos.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nombre}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
+
           {hayFiltros && (
-            <div className="mt-2 flex justify-end">
+            <div className="mt-3 pt-3 border-t border-slate-100 flex justify-end">
               <button
                 onClick={() => { setBusqueda(''); setFiltroCargo(''); }}
-                className="text-xs text-blue-600 hover:text-blue-800 font-medium
-                           inline-flex items-center gap-1"
+                className="text-xs text-red-600 hover:text-red-700 font-semibold
+                           inline-flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-red-50 transition"
               >
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X className="w-3 h-3" strokeWidth={2.5} />
                 Limpiar filtros
               </button>
             </div>
@@ -327,65 +411,184 @@ const TrabajadoresPage = () => {
         </div>
       )}
 
-      {/* Contenido */}
+      {/* ═══ Contenido ═══ */}
       {trabajadoresFiltrados.length === 0 ? (
-        <div className="bg-white rounded-xl border-2 border-dashed border-gray-200 p-12 text-center">
-          <div className="w-14 h-14 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center text-2xl">
-            👨‍⚕️
+        <div className="bg-white rounded-xl border-2 border-dashed border-slate-200 p-10 sm:p-12 text-center">
+          <div className="w-14 h-14 mx-auto mb-3 bg-slate-100 rounded-full flex items-center justify-center">
+            <ClipboardList className="w-7 h-7 text-slate-400" strokeWidth={1.8} />
           </div>
-          <p className="text-gray-500 text-sm font-medium">
-            {hayFiltros ? 'No hay trabajadores que coincidan' : 'No hay trabajadores registrados'}
+          <p className="text-slate-500 text-sm font-medium">
+            {hayFiltros
+              ? 'No hay trabajadores que coincidan con tu búsqueda'
+              : 'Aún no hay trabajadores registrados'}
           </p>
           {!hayFiltros && (
             <button
               onClick={handleNew}
-              className="mt-3 text-blue-600 hover:text-blue-800 text-sm font-medium"
+              className="mt-3 text-slate-700 hover:text-slate-900 text-sm font-medium inline-flex items-center gap-1"
             >
-              + Crear el primero
+              <UserPlus className="w-3.5 h-3.5" strokeWidth={2.5} />
+              Crear el primero
+            </button>
+          )}
+          {hayFiltros && (
+            <button
+              onClick={() => { setBusqueda(''); setFiltroCargo(''); }}
+              className="mt-3 text-slate-700 hover:text-slate-900 text-sm font-medium inline-flex items-center gap-1"
+            >
+              <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+              Limpiar filtros
             </button>
           )}
         </div>
       ) : (
-        <DataTable
-          columns={columns}
-          data={trabajadoresFiltrados}
-          onRowClick={(row) => navigate(`/trabajadores/${row.id}`)}
-          showGlobalFilter={false}
-        />
+        <>
+          {/* ═══ DESKTOP: Tabla ═══ */}
+          <div className="hidden lg:block bg-white rounded-xl shadow-sm border border-slate-200/60 overflow-hidden">
+            <DataTable
+              columns={columns}
+              data={trabajadoresFiltrados}
+              onRowClick={(row) => navigate(`/trabajadores/${row.id}`)}
+              showGlobalFilter={false}
+              rowClassName={(row) => (!row.activo ? 'opacity-60' : '')}
+            />
+          </div>
+
+          {/* ═══ MÓVIL: Cards ═══ */}
+          <div className="lg:hidden space-y-2.5">
+            {trabajadoresFiltrados.map((t) => {
+              const isM = t.sexo === 'M';
+              return (
+                <div
+                  key={t.id}
+                  className={`bg-white rounded-xl shadow-sm border border-slate-200/60 overflow-hidden
+                             transition ${!t.activo ? 'opacity-60' : ''}`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/trabajadores/${t.id}`)}
+                    className="w-full text-left p-3.5 hover:bg-slate-50/60 active:bg-slate-100/60 transition
+                               flex items-start gap-3"
+                  >
+                    {t.foto ? (
+                      <img
+                        src={getImageUrl(t.foto)}
+                        alt={t.nombre}
+                        className="w-11 h-11 rounded-lg object-cover border border-slate-200 shrink-0"
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <div className="w-11 h-11 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                        <UserCog className="w-5 h-5 text-slate-600" strokeWidth={2.2} />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-semibold text-sm text-slate-800 truncate">
+                          {t.nombre || 'Sin nombre'}
+                        </p>
+                        <span
+                          className={`shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide
+                            ${t.activo
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-slate-200 text-slate-600'}`}
+                        >
+                          {t.activo ? 'On' : 'Off'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-1 tabular-nums">
+                        CI: {t.cedula}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                        {t.cargo?.nombre && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded
+                                            bg-slate-100 text-slate-700 text-[10px] font-semibold">
+                            <Briefcase className="w-2.5 h-2.5" strokeWidth={2.5} />
+                            {t.cargo.nombre}
+                          </span>
+                        )}
+                        <span
+                          className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold
+                            ${isM ? 'bg-blue-50 text-blue-700' : 'bg-pink-50 text-pink-700'}`}
+                        >
+                          {isM ? '♂ M' : '♀ F'}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+
+                  <div className="flex border-t border-slate-100">
+                    <button
+                      onClick={() => navigate(`/trabajadores/${t.id}/editar`)}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium
+                                 text-blue-600 hover:bg-blue-50 active:bg-blue-100 transition"
+                    >
+                      <Pencil className="w-3.5 h-3.5" strokeWidth={2.3} />
+                      Editar
+                    </button>
+                    <div className="w-px bg-slate-100" />
+                    <button
+                      onClick={() => handleToggleActivo(t)}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition
+                        ${t.activo
+                          ? 'text-red-600 hover:bg-red-50 active:bg-red-100'
+                          : 'text-emerald-600 hover:bg-emerald-50 active:bg-emerald-100'}`}
+                    >
+                      <Power className="w-3.5 h-3.5" strokeWidth={2.3} />
+                      {t.activo ? 'Desactivar' : 'Activar'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {/* ═══ Modal ═══ */}
       <Modal
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => !isSubmitting && setModalOpen(false)}
         title={selectedTrabajador ? 'Editar Trabajador' : 'Nuevo Trabajador'}
         size="md"
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+
           {/* ─── Sección: Datos personales ─── */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 pb-1 border-b border-gray-100">
-              <span className="w-1 h-4 bg-blue-600 rounded-full" />
-              <h3 className="text-sm font-semibold text-gray-700">Datos personales</h3>
+          <section className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="w-1 h-5 bg-slate-700 rounded-full"></span>
+              <UserCog className="w-4 h-4 text-slate-700 shrink-0" strokeWidth={2.2} />
+              <h3 className="text-base font-semibold text-slate-800">Datos personales</h3>
             </div>
 
+            {/* Nombre */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
+                <UserIcon className="w-3.5 h-3.5 text-slate-500" strokeWidth={2.2} />
                 Nombre completo <span className="text-red-500">*</span>
               </label>
               <input
                 autoFocus
+                placeholder="Ej: Juan Pérez"
                 {...register('nombre')}
-                className={`w-full border rounded-lg px-3 py-2.5 text-sm
-                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                  ${errors.nombre ? 'border-red-400' : 'border-gray-300'}`}
+                className={`w-full border rounded-lg px-3 py-2.5 text-sm bg-white
+                  focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500
+                  ${errors.nombre ? 'border-red-400' : 'border-slate-300'}`}
               />
-              {errors.nombre && <p className="text-red-600 text-xs mt-1">{errors.nombre.message}</p>}
+              {errors.nombre && (
+                <p className="text-red-600 text-xs mt-1.5 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" strokeWidth={2.5} />
+                  {errors.nombre.message}
+                </p>
+              )}
             </div>
 
+            {/* Cédula + Sexo */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
+                  <CreditCard className="w-3.5 h-3.5 text-slate-500" strokeWidth={2.2} />
                   Cédula <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -399,71 +602,104 @@ const TrabajadoresPage = () => {
                       setValue('cedula', raw, { shouldValidate: true });
                     }
                   }}
-                  className={`w-full border rounded-lg px-3 py-2.5 text-sm tabular-nums
-                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                    ${errors.cedula ? 'border-red-400' : 'border-gray-300'}`}
+                  placeholder="12345678"
+                  className={`w-full border rounded-lg px-3 py-2.5 text-sm bg-white tabular-nums
+                    focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500
+                    ${errors.cedula ? 'border-red-400' : 'border-slate-300'}`}
                 />
                 <input type="hidden" {...register('cedula')} />
-                {errors.cedula && <p className="text-red-600 text-xs mt-1">{errors.cedula.message}</p>}
+                {errors.cedula && (
+                  <p className="text-red-600 text-xs mt-1.5 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" strokeWidth={2.5} />
+                    {errors.cedula.message}
+                  </p>
+                )}
+                {!errors.cedula && cedulaDisplay && (
+                  <p className="text-[11px] text-slate-400 mt-1 tabular-nums">
+                    {cedulaDisplay.length}/10 dígitos
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
+                  <Heart className="w-3.5 h-3.5 text-slate-500" strokeWidth={2.2} />
                   Sexo <span className="text-red-500">*</span>
                 </label>
                 <select
                   {...register('sexo')}
-                  className={`w-full border rounded-lg px-3 py-2.5 text-sm
-                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                    ${errors.sexo ? 'border-red-400' : 'border-gray-300'}`}
+                  className={`w-full border rounded-lg px-3 py-2.5 text-sm bg-white
+                    focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500
+                    ${errors.sexo ? 'border-red-400' : 'border-slate-300'}`}
                 >
                   <option value="M">Masculino</option>
                   <option value="F">Femenino</option>
                 </select>
-                {errors.sexo && <p className="text-red-600 text-xs mt-1">{errors.sexo.message}</p>}
+                {errors.sexo && (
+                  <p className="text-red-600 text-xs mt-1.5 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" strokeWidth={2.5} />
+                    {errors.sexo.message}
+                  </p>
+                )}
               </div>
             </div>
 
+            {/* Fecha nacimiento */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
+                <Cake className="w-3.5 h-3.5 text-slate-500" strokeWidth={2.2} />
                 Fecha de nacimiento <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
                 {...register('fechaNacimiento')}
-                className={`w-full border rounded-lg px-3 py-2.5 text-sm
-                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                  ${errors.fechaNacimiento ? 'border-red-400' : 'border-gray-300'}`}
+                className={`w-full border rounded-lg px-3 py-2.5 text-sm bg-white
+                  focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500
+                  ${errors.fechaNacimiento ? 'border-red-400' : 'border-slate-300'}`}
               />
               {errors.fechaNacimiento && (
-                <p className="text-red-600 text-xs mt-1">{errors.fechaNacimiento.message}</p>
+                <p className="text-red-600 text-xs mt-1.5 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" strokeWidth={2.5} />
+                  {errors.fechaNacimiento.message}
+                </p>
               )}
             </div>
-          </div>
+          </section>
 
-          {/* ─── Sección: Trabajo ─── */}
-          <div className="space-y-3 pt-2">
-            <div className="flex items-center gap-2 pb-1 border-b border-gray-100">
-              <span className="w-1 h-4 bg-blue-600 rounded-full" />
-              <h3 className="text-sm font-semibold text-gray-700">Información laboral</h3>
+          {/* ─── Sección: Info laboral ─── */}
+          <section className="space-y-3 pt-3 border-t border-slate-100">
+            <div className="flex items-center gap-2">
+              <span className="w-1 h-5 bg-slate-700 rounded-full"></span>
+              <Briefcase className="w-4 h-4 text-slate-700 shrink-0" strokeWidth={2.2} />
+              <h3 className="text-base font-semibold text-slate-800">Información laboral</h3>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-slate-500" strokeWidth={2.2} />
                 Cargo <span className="text-red-500">*</span>
               </label>
               <select
                 {...register('cargoId', { valueAsNumber: true })}
-                className={`w-full border rounded-lg px-3 py-2.5 text-sm
-                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                  ${errors.cargoId ? 'border-red-400' : 'border-gray-300'}`}
+                className={`w-full border rounded-lg px-3 py-2.5 text-sm bg-white
+                  focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-slate-500
+                  ${errors.cargoId ? 'border-red-400' : 'border-slate-300'}`}
               >
                 <option value="">Seleccione un cargo</option>
-                {cargos.map(c => (
+                {cargos.map((c) => (
                   <option key={c.id} value={c.id}>{c.nombre}</option>
                 ))}
               </select>
-              {errors.cargoId && <p className="text-red-600 text-xs mt-1">{errors.cargoId.message}</p>}
+              {errors.cargoId && (
+                <p className="text-red-600 text-xs mt-1.5 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" strokeWidth={2.5} />
+                  {errors.cargoId.message}
+                </p>
+              )}
+              <p className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1.5">
+                <Shield className="w-3 h-3 shrink-0 text-slate-400" strokeWidth={2.5} />
+                El cargo define los permisos y roles disponibles
+              </p>
             </div>
 
             <div>
@@ -474,43 +710,78 @@ const TrabajadoresPage = () => {
                 label="Foto del trabajador"
               />
             </div>
-          </div>
+          </section>
 
           {/* ─── Sección: Estado ─── */}
-          <div className="pt-2">
-            <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition">
+          <section className="pt-3 border-t border-slate-100">
+            <label className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg cursor-pointer
+                              hover:bg-slate-100 transition select-none">
               <input
                 type="checkbox"
                 {...register('activo')}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="w-4 h-4 text-slate-700 border-slate-300 rounded focus:ring-slate-500"
               />
-              <div>
-                <span className="block text-sm font-medium text-gray-700">Trabajador activo</span>
-                <span className="block text-[11px] text-gray-500">
+              <div className="flex-1 min-w-0">
+                <span className="block text-sm font-medium text-slate-700">
+                  Trabajador activo
+                </span>
+                <span className="block text-[11px] text-slate-500">
                   Los inactivos no aparecen en listados operativos
                 </span>
               </div>
+              <span
+                className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide transition
+                  ${activoWatch ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}
+              >
+                {activoWatch ? (
+                  <>
+                    <CheckCircle2 className="w-3 h-3" strokeWidth={2.5} />
+                    Activo
+                  </>
+                ) : (
+                  <>
+                    <Power className="w-3 h-3" strokeWidth={2.5} />
+                    Inactivo
+                  </>
+                )}
+              </span>
             </label>
-          </div>
+          </section>
 
           {/* ─── Botones ─── */}
-          <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2 border-t border-gray-100">
+          <div className="flex flex-col sm:flex-row justify-end gap-2 pt-3 border-t border-slate-100">
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium
-                         hover:bg-gray-200 transition order-2 sm:order-1"
+              disabled={isSubmitting}
+              className="inline-flex items-center justify-center gap-2
+                         px-4 py-2.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium
+                         hover:bg-slate-200 active:bg-slate-300 transition
+                         order-2 sm:order-1 disabled:opacity-50"
             >
+              <X className="w-4 h-4" strokeWidth={2.5} />
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium
-                         hover:bg-blue-700 transition disabled:opacity-50
-                         inline-flex items-center justify-center gap-2 order-1 sm:order-2"
+              className="inline-flex items-center justify-center gap-2
+                         px-4 py-2.5 bg-slate-800 text-white rounded-lg text-sm font-medium
+                         hover:bg-slate-900 active:bg-black transition
+                         order-1 sm:order-2 disabled:opacity-50 disabled:cursor-not-allowed
+                         shadow-sm shadow-slate-800/20"
             >
-              {isSubmitting ? 'Guardando...' : 'Guardar'}
+              {isSubmitting ? (
+                <>
+                  <span className="animate-spin w-4 h-4 border-2 border-white/40 border-t-white rounded-full" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" strokeWidth={2.5} />
+                  Guardar
+                </>
+              )}
             </button>
           </div>
         </form>
