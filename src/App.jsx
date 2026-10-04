@@ -3,7 +3,8 @@ import { AuthProvider } from './context/AuthContext'
 import PrivateRoute from './routes/PrivateRoute'
 import PublicRoute from './routes/PublicRoute'
 import Layout from './components/common/Layout'
-
+import ErrorBoundary from './components/common/ErrorBoundary';
+import { ConfirmProvider } from './context/ConfirmContext';
 // Auth
 import LoginPage from './pages/Auth/LoginPage'
 
@@ -101,6 +102,8 @@ import IncomeReportPage from './pages/Reports/IncomeReportPage';
 function App() {
   return (
     <BrowserRouter>
+    <ErrorBoundary>
+      <ConfirmProvider>
       <AuthProvider>
         <Routes>
           {/* Ruta pública: login */}
@@ -211,6 +214,8 @@ function App() {
           </Route>
         </Routes>
       </AuthProvider>
+      </ConfirmProvider>
+      </ErrorBoundary>
     </BrowserRouter>
   )
 }

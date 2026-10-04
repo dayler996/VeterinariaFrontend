@@ -8,9 +8,7 @@ import { getEspecies, createEspecie, updateEspecie, deleteEspecie } from '../../
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
-const schema = z.object({
-  nombre: z.string().min(1, 'Nombre requerido'),
-});
+const schema = z.object({ nombre: z.string().min(1, 'Nombre requerido') });
 
 const EspeciesPage = () => {
   const { user } = useAuth();
@@ -21,50 +19,11 @@ const EspeciesPage = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [mostrarInactivos, setMostrarInactivos] = useState(false);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm({
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(schema),
   });
 
-  const columns = [
-    { header: 'ID', accessorKey: 'id' },
-    { header: 'Nombre', accessorKey: 'nombre' },
-    {
-      header: 'Activo',
-      accessorKey: 'activo',
-      cell: ({ getValue }) => (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          getValue() ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-        }`}>
-          {getValue() ? 'Activo' : 'Inactivo'}
-        </span>
-      ),
-    },
-    {
-      header: 'Acciones',
-      cell: ({ row }) => (
-        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-          <button
-            onClick={() => handleEdit(row.original)}
-            className="text-yellow-600 hover:text-yellow-800"
-          >
-            Editar
-          </button>
-          {isAdmin && (
-            <button
-              onClick={() => handleToggleActivo(row.original)}
-              className={row.original.activo ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'}
-            >
-              {row.original.activo ? 'Desactivar' : 'Activar'}
-            </button>
-          )}
-        </div>
-      ),
-    },
-  ];
-
-  useEffect(() => {
-    loadItems();
-  }, [mostrarInactivos]);
+  useEffect(() => { loadItems(); }, [mostrarInactivos]);
 
   const loadItems = async () => {
     try {
@@ -72,24 +31,12 @@ const EspeciesPage = () => {
       const params = mostrarInactivos ? { incluirInactivos: true } : {};
       const res = await getEspecies(params);
       setItems(res.data);
-    } catch (error) {
-      toast.error('Error al cargar especies');
-    } finally {
-      setLoading(false);
-    }
+    } catch { toast.error('Error al cargar especies'); }
+    finally { setLoading(false); }
   };
 
-  const handleNew = () => {
-    setSelectedItem(null);
-    reset({ nombre: '' });
-    setModalOpen(true);
-  };
-
-  const handleEdit = (item) => {
-    setSelectedItem(item);
-    reset({ nombre: item.nombre });
-    setModalOpen(true);
-  };
+  const handleNew = () => { setSelectedItem(null); reset({ nombre: '' }); setModalOpen(true); };
+  const handleEdit = (item) => { setSelectedItem(item); reset({ nombre: item.nombre }); setModalOpen(true); };
 
   const handleToggleActivo = async (item) => {
     const accion = item.activo ? 'desactivar' : 'activar';
@@ -98,71 +45,88 @@ const EspeciesPage = () => {
       await updateEspecie(item.id, { ...item, activo: !item.activo });
       toast.success(`Especie ${accion === 'desactivar' ? 'desactivada' : 'activada'}`);
       loadItems();
-    } catch (error) {
-      toast.error(`Error al ${accion} especie`);
-    }
+    } catch { toast.error(`Error al ${accion} especie`); }
   };
 
   const onSubmit = async (data) => {
     try {
-      if (selectedItem) {
-        await updateEspecie(selectedItem.id, { ...selectedItem, ...data });
-        toast.success('Especie actualizada');
-      } else {
-        await createEspecie(data);
-        toast.success('Especie creada');
-      }
-      setModalOpen(false);
-      loadItems();
-    } catch (error) {
-      toast.error('Error al guardar');
-    }
+      if (selectedItem) await updateEspecie(selectedItem.id, { ...selectedItem, ...data });
+      else await createEspecie(data);
+      toast.success(selectedItem ? 'Especie actualizada' : 'Especie creada');
+      setModalOpen(false); loadItems();
+    } catch { toast.error('Error al guardar'); }
   };
 
-  if (loading) return <div className="text-center p-4">Cargando...</div>;
+  const columns = [
+    { header: 'ID', accessorKey: 'id' },
+    { header: 'Nombre', accessorKey: 'nombre', cell: ({ getValue }) => <span className="font-medium text-gray-800">{getValue()}</span> },
+    {
+      header: 'Estado', accessorKey: 'activo',
+      cell: ({ getValue }) => (
+        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${getValue() ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+          {getValue() ? 'Activo' : 'Inactivo'}
+        </span>
+      ),
+    },
+    {
+      id: 'acciones', header: 'Acciones', cell: ({ row }) => (
+        <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+          <button onClick={() => handleEdit(row.original)} className="p-2 rounded-lg text-blue-600 hover:bg-blue-50" title="Editar">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+          </button>
+          {isAdmin && (
+            <button onClick={() => handleToggleActivo(row.original)} className={`p-2 rounded-lg ${row.original.activo ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}`} title={row.original.activo ? 'Desactivar' : 'Activar'}>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M18.36 6.64A9 9 0 11 5.64 6.64M12 2v10" /></svg>
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
+  if (loading) return <div className="text-center p-4 text-gray-500">Cargando...</div>;
 
   return (
-    <div className="p-2 sm:p-4">
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-2">
-        <h1 className="text-xl sm:text-2xl font-bold">Especies</h1>
-        <div className="flex gap-2 flex-wrap">
+    <div className="p-3 sm:p-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Especies</h1>
+          <p className="text-xs sm:text-sm text-gray-500">{items.length} {items.length === 1 ? 'especie' : 'especies'}</p>
+        </div>
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           {isAdmin && (
-            <label className="flex items-center gap-2 text-sm bg-gray-100 px-3 py-1 rounded">
-              <input
-                type="checkbox"
-                checked={mostrarInactivos}
-                onChange={(e) => setMostrarInactivos(e.target.checked)}
-              />
-              Mostrar inactivos
+            <label className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 cursor-pointer hover:bg-gray-50">
+              <input type="checkbox" checked={mostrarInactivos} onChange={(e) => setMostrarInactivos(e.target.checked)} className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+              Inactivos
             </label>
           )}
-          <button onClick={handleNew} className="bg-blue-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded text-sm hover:bg-blue-700">
+          <button onClick={handleNew} className="inline-flex items-center justify-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition w-full sm:w-auto">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
             Nueva Especie
           </button>
         </div>
       </div>
 
-      <DataTable
-        columns={columns}
-        data={items}
-        onRowClick={handleEdit}
-        rowClassName={(row) => !row.activo ? 'opacity-50 line-through' : ''}
-      />
+      {items.length === 0 ? (
+        <div className="bg-white rounded-xl border-2 border-dashed border-gray-200 p-12 text-center">
+          <div className="w-14 h-14 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center text-2xl">🐶</div>
+          <p className="text-gray-500 text-sm">No hay especies registradas</p>
+          <button onClick={handleNew} className="mt-3 text-blue-600 hover:text-blue-800 text-sm font-medium">+ Crear la primera</button>
+        </div>
+      ) : (
+        <DataTable columns={columns} data={items} onRowClick={handleEdit} showGlobalFilter={false} />
+      )}
 
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={selectedItem ? 'Editar Especie' : 'Nueva Especie'}>
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={selectedItem ? 'Editar Especie' : 'Nueva Especie'} size="sm">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium">Nombre</label>
-            <input {...register('nombre')} className="mt-1 block w-full border rounded p-2" />
-            {errors.nombre && <p className="text-red-600 text-sm">{errors.nombre.message}</p>}
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+            <input {...register('nombre')} className={`w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.nombre ? 'border-red-400' : 'border-gray-300'}`} />
+            {errors.nombre && <p className="text-red-600 text-xs mt-1">{errors.nombre.message}</p>}
           </div>
-          <div className="flex flex-col sm:flex-row justify-end gap-2">
-            <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 bg-gray-300 rounded order-2 sm:order-1">
-              Cancelar
-            </button>
-            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded order-1 sm:order-2">
-              Guardar
-            </button>
+          <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
+            <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition order-2 sm:order-1">Cancelar</button>
+            <button type="submit" disabled={isSubmitting} className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50 order-1 sm:order-2">{isSubmitting ? 'Guardando...' : 'Guardar'}</button>
           </div>
         </form>
       </Modal>

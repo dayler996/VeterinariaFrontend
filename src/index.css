@@ -29,3 +29,236 @@
 .react-select-container .react-select__input-container {
   @apply text-sm;
 }
+
+/* ═══════════════════════════════════════════
+   React Big Calendar — Overrides
+   ═══════════════════════════════════════════ */
+
+.rbc-calendar {
+  font-family: inherit;
+  color: #374151;
+}
+
+/* ── Botones genéricos ── */
+.rbc-btn {
+  color: inherit;
+  font: inherit;
+}
+
+/* ── Header de la toolbar por defecto (no se usará) ── */
+.rbc-toolbar {
+  display: none;
+}
+
+/* ── Mes ── */
+.rbc-month-view {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.rbc-month-header {
+  background: #f9fafb;
+}
+
+.rbc-header {
+  padding: 8px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.rbc-header + .rbc-header {
+  border-left: 1px solid #e5e7eb;
+}
+
+.rbc-date-cell {
+  padding: 4px 6px;
+  font-size: 12px;
+  color: #374151;
+}
+
+.rbc-date-cell.rbc-now {
+  font-weight: 700;
+  color: #2563eb;
+}
+
+.rbc-off-range-bg {
+  background: #f9fafb;
+}
+
+.rbc-off-range {
+  color: #d1d5db;
+}
+
+.rbc-today {
+  background-color: #eff6ff !important;
+}
+
+.rbc-month-row + .rbc-month-row {
+  border-top: 1px solid #e5e7eb;
+}
+
+.rbc-day-bg + .rbc-day-bg {
+  border-left: 1px solid #e5e7eb;
+}
+
+/* ── Eventos ── */
+.rbc-event {
+  padding: 2px 6px !important;
+  border-radius: 6px !important;
+  border: none !important;
+  font-size: 11px !important;
+  font-weight: 500;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.rbc-event:hover {
+  filter: brightness(1.08);
+}
+
+.rbc-event.rbc-selected {
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35);
+}
+
+.rbc-event-label {
+  font-size: 10px;
+  opacity: 0.9;
+}
+
+.rbc-show-more {
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 4px;
+  background: transparent;
+}
+
+.rbc-show-more:hover {
+  text-decoration: underline;
+}
+
+/* ── Vista Semana/Día ── */
+.rbc-time-view {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.rbc-time-header {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.rbc-time-header-content {
+  border-left: 1px solid #e5e7eb;
+}
+
+.rbc-time-content {
+  border-top: 1px solid #e5e7eb;
+}
+
+.rbc-time-slot {
+  border-top: 1px solid #f3f4f6;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.rbc-timeslot-group {
+  border-bottom: 1px solid #f3f4f6;
+  min-height: 40px;
+}
+
+.rbc-day-slot .rbc-time-slot {
+  border-top: 1px solid #f9fafb;
+}
+
+.rbc-current-time-indicator {
+  background-color: #ef4444;
+  height: 2px;
+}
+
+/* ── Vista Agenda ── */
+.rbc-agenda-view {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.rbc-agenda-view table.rbc-agenda-table {
+  border: none;
+}
+
+.rbc-agenda-view table.rbc-agenda-table thead > tr > th {
+  background: #f9fafb;
+  padding: 10px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.rbc-agenda-view table.rbc-agenda-table tbody > tr > td {
+  padding: 10px 8px;
+  font-size: 13px;
+  border-top: 1px solid #f3f4f6;
+  vertical-align: top;
+}
+
+.rbc-agenda-view table.rbc-agenda-table tbody > tr:hover {
+  background: #f9fafb;
+}
+
+.rbc-agenda-date-cell,
+.rbc-agenda-time-cell {
+  white-space: nowrap;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.rbc-agenda-event-cell {
+  color: #111827;
+  font-weight: 500;
+}
+
+/* ── Popup "ver más" ── */
+.rbc-overlay {
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  padding: 8px;
+  background: white;
+}
+
+.rbc-overlay-header {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+/* ── Ajustes móvil ── */
+@media (max-width: 640px) {
+  .rbc-header {
+    font-size: 10px;
+    padding: 6px 2px;
+  }
+  .rbc-date-cell {
+    font-size: 11px;
+    padding: 3px 4px;
+  }
+  .rbc-event {
+    font-size: 10px !important;
+    padding: 1px 4px !important;
+  }
+  .rbc-show-more {
+    font-size: 10px;
+  }
+}
