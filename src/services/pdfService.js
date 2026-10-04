@@ -1,62 +1,59 @@
+// frontend/src/services/pdfService.js
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getCompanySettings } from './companyService';
 import { getImageUrl } from '../utils/imageUtils';
 
 /* ═══════════════════════════════════════════════════════════════
-   PALETA Y CONSTANTES
+   PALETA PROFESIONAL
    ═══════════════════════════════════════════════════════════════ */
 const COLORS = {
-  primary:     [37, 99, 235],    // #2563eb - Azul principal
-  primaryDark: [30, 64, 175],    // #1e40af - Azul oscuro
-  success:     [22, 163, 74],    // #16a34a - Verde
-  danger:      [220, 38, 38],    // #dc2626 - Rojo
-  warning:     [245, 158, 11],   // #f59e0b - Amarillo
-  info:        [8, 145, 178],    // #0891b2 - Cian
-  textDark:    [17, 24, 39],     // #111827 - Casi negro
-  textMuted:   [107, 114, 128],  // #6b7280 - Gris
-  textLight:   [156, 163, 175],  // #9ca3af - Gris claro
-  border:      [229, 231, 235],  // #e5e7eb - Gris línea
-  bgLight:     [249, 250, 251],  // #f9fafb - Fondo claro
-  bgSection:   [243, 244, 246],  // #f3f4f6 - Fondo sección
-  white:       [255, 255, 255],
+  primary:      [30, 58, 138],    // #1e3a8a - navy
+  primarySoft:  [59, 130, 246],   // #3b82f6
+  primaryLight: [219, 234, 254],  // #dbeafe
+
+  success:      [21, 128, 61],
+  warning:      [161, 98, 7],
+  danger:       [185, 28, 28],
+  info:         [15, 118, 110],
+
+  ink:          [15, 23, 42],
+  inkSoft:      [51, 65, 85],
+  muted:        [100, 116, 139],
+  mutedLight:   [148, 163, 184],
+  border:       [226, 232, 240],
+  borderSoft:   [241, 245, 249],
+  bg:           [248, 250, 252],
+  bgSoft:       [241, 245, 249],
+  white:        [255, 255, 255],
 };
 
 const PAGE = {
-  width: 210,        // A4 mm
+  width: 210,
   height: 297,
   marginLeft: 14,
   marginRight: 14,
-  marginTop: 14,
-  marginBottom: 22,
+  marginTop: 12,
+  marginBottom: 18,
   contentWidth: 210 - 14 - 14, // = 182mm
 };
 
-/* Mapeo de estados a color semántico */
 const ESTADOS_COLORES = {
-  PAGADA: COLORS.success,
-  PAGADO: COLORS.success,
-  ACTIVO: COLORS.success,
-  ACTIVA: COLORS.success,
-  COMPLETADA: COLORS.success,
-  COMPLETADO: COLORS.success,
-  FINALIZADA: COLORS.success,
-  ABONADA: COLORS.info,
-  PENDIENTE: COLORS.warning,
-  EN_PROCESO: COLORS.warning,
-  ANULADA: COLORS.danger,
-  ANULADO: COLORS.danger,
-  CANCELADA: COLORS.danger,
-  CANCELADO: COLORS.danger,
-  INACTIVO: COLORS.textMuted,
-  INACTIVA: COLORS.textMuted,
+  PAGADA: COLORS.success, PAGADO: COLORS.success,
+  ACTIVO: COLORS.success, ACTIVA: COLORS.success,
+  COMPLETADA: COLORS.success, COMPLETADO: COLORS.success,
+  FINALIZADA: COLORS.success, FINALIZADO: COLORS.success,
+  ABONADA: COLORS.info, ABONADO: COLORS.info,
+  PENDIENTE: COLORS.warning, EN_PROCESO: COLORS.warning, EN_CURSO: COLORS.warning,
+  ANULADA: COLORS.danger, ANULADO: COLORS.danger,
+  CANCELADA: COLORS.danger, CANCELADO: COLORS.danger,
+  VENCIDO: COLORS.danger, VENCIDA: COLORS.danger,
+  INACTIVO: COLORS.muted, INACTIVA: COLORS.muted,
 };
 
 /* ═══════════════════════════════════════════════════════════════
    UTILIDADES
    ═══════════════════════════════════════════════════════════════ */
-
-/** Convierte una URL a base64 (para meter imágenes en el PDF) */
 const urlToBase64 = async (url) => {
   try {
     const response = await fetch(url);
@@ -73,16 +70,13 @@ const urlToBase64 = async (url) => {
   }
 };
 
-/** Obtiene las dimensiones reales de una imagen en base64 */
-const getImageDimensions = (base64) => {
-  return new Promise((resolve) => {
+const getImageDimensions = (base64) =>
+  new Promise((resolve) => {
     const img = new Image();
     img.onload = () => resolve({ width: img.width, height: img.height });
     img.src = base64;
   });
-};
 
-/** Detecta el formato de imagen a partir del dataURL */
 const detectImageFormat = (base64) => {
   if (!base64) return 'PNG';
   if (base64.includes('data:image/png')) return 'PNG';
@@ -91,48 +85,45 @@ const detectImageFormat = (base64) => {
   return 'PNG';
 };
 
-/** ¿El valor corresponde a un estado coloreable? */
 const esEstadoColoreable = (valor) => {
   if (typeof valor !== 'string') return null;
   const clean = valor.trim().toUpperCase().replace(/\s+/g, '_');
   return ESTADOS_COLORES[clean] || null;
 };
 
-/** Espacio vertical garantizado, si no cabe → nueva página */
 const ensureSpace = (doc, yPos, needed) => {
   const pageHeight = doc.internal.pageSize.getHeight();
   const limit = pageHeight - PAGE.marginBottom;
   if (yPos + needed > limit) {
     doc.addPage();
-    return PAGE.marginTop + 5;
+    return PAGE.marginTop + 3;
   }
   return yPos;
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   HEADER Y FOOTER
-   ═══════════════════════════════════════════════════════════════ */
+const generarDocId = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const rand = String(Math.floor(Math.random() * 9999)).padStart(4, '0');
+  return `DOC-${year}-${rand}`;
+};
 
-/**
- * Dibuja la cabecera con:
- * - Logo (si existe)
- * - Nombre de la empresa (grande, bold)
- * - Subtítulo
- * - Línea azul decorativa
- *
- * Devuelve la Y donde debe continuar el contenido.
- */
-const dibujarHeader = async (doc, companyName, logoUrl) => {
+/* ═══════════════════════════════════════════════════════════════
+   HEADER COMPACTO (membrete)
+   ═══════════════════════════════════════════════════════════════ */
+const dibujarHeader = async (doc, companyName, logoUrl, docId) => {
   const yStart = PAGE.marginTop;
-  const logoSize = 20;
+  const logoSize = 14;                 // ← era 18
   const logoX = PAGE.marginLeft;
   const textX = logoUrl ? logoX + logoSize + 5 : logoX;
 
-  // Fondo blanco (por si acaso) + logo
+  // Logo con marco
   if (logoUrl) {
     try {
       const logoBase64 = await urlToBase64(getImageUrl(logoUrl));
       if (logoBase64) {
+        doc.setFillColor(...COLORS.bgSoft);
+        doc.roundedRect(logoX - 1, yStart - 1, logoSize + 2, logoSize + 2, 1.5, 1.5, 'F');
         const fmt = detectImageFormat(logoBase64);
         doc.addImage(logoBase64, fmt, logoX, yStart, logoSize, logoSize);
       }
@@ -142,161 +133,169 @@ const dibujarHeader = async (doc, companyName, logoUrl) => {
   }
 
   // Nombre empresa
-  doc.setTextColor(...COLORS.primaryDark);
+  doc.setTextColor(...COLORS.ink);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.text(companyName || 'Veterinaria', textX, yStart + 8);
+  doc.setFontSize(14);                 // ← era 16
+  doc.text(companyName || 'Veterinaria', textX, yStart + 5.5);
 
   // Subtítulo
-  doc.setTextColor(...COLORS.textMuted);
-  doc.setFont('helvetica', 'italic');
-  doc.setFontSize(9);
-  doc.text('Sistema de Gestión Veterinaria', textX, yStart + 15);
+  doc.setTextColor(...COLORS.muted);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);                // ← era 8.5
+  doc.text('Sistema de Gestión Veterinaria', textX, yStart + 10.5);
 
-  // Línea decorativa: 2px gris + 1px azul
-  const lineY = yStart + logoSize + 3;
+  // Doc ID + fecha a la derecha
+  doc.setTextColor(...COLORS.mutedLight);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  const docIdText = `Ref: ${docId}`;
+  const docIdWidth = doc.getTextWidth(docIdText);
+  doc.text(docIdText, PAGE.width - PAGE.marginRight - docIdWidth, yStart + 5.5);
+
+  const fecha = new Date().toLocaleDateString('es-ES', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  });
+  const fechaWidth = doc.getTextWidth(fecha);
+  doc.text(fecha, PAGE.width - PAGE.marginRight - fechaWidth, yStart + 10.5);
+
+  // Línea decorativa
+  const lineY = yStart + logoSize + 3.5;
+
   doc.setDrawColor(...COLORS.border);
-  doc.setLineWidth(0.3);
+  doc.setLineWidth(0.2);
   doc.line(PAGE.marginLeft, lineY, PAGE.width - PAGE.marginRight, lineY);
 
   doc.setDrawColor(...COLORS.primary);
-  doc.setLineWidth(0.8);
-  doc.line(PAGE.marginLeft, lineY, PAGE.marginLeft + 30, lineY);
+  doc.setLineWidth(0.7);
+  doc.line(PAGE.marginLeft, lineY, PAGE.marginLeft + 32, lineY);
 
-  return lineY + 8;
+  return lineY + 5;                    // ← era +8
 };
 
-/**
- * Dibuja la banda con el título del documento:
- * - Fondo gris muy claro
- * - Título azul oscuro grande
- * - Fecha de generación
- */
+/* ═══════════════════════════════════════════════════════════════
+   TÍTULO COMPACTO (banda)
+   ═══════════════════════════════════════════════════════════════ */
 const dibujarTituloDocumento = (doc, title, yPos) => {
-  const boxHeight = 16;
+  const boxHeight = 13;                // ← era 18
   const boxWidth = PAGE.contentWidth;
 
-  // Fondo de la banda
-  doc.setFillColor(...COLORS.bgSection);
-  doc.roundedRect(PAGE.marginLeft, yPos, boxWidth, boxHeight, 2, 2, 'F');
-
-  // Barra azul a la izquierda
   doc.setFillColor(...COLORS.primary);
-  doc.rect(PAGE.marginLeft, yPos, 1.5, boxHeight, 'F');
+  doc.rect(PAGE.marginLeft, yPos, boxWidth, boxHeight, 'F');
 
-  // Título
-  doc.setTextColor(...COLORS.primaryDark);
+  doc.setFillColor(...COLORS.primarySoft);
+  doc.rect(PAGE.marginLeft, yPos, boxWidth, 0.6, 'F');
+
+  // Título + fecha en la MISMA fila (más compacto)
+  doc.setTextColor(...COLORS.white);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text(title, PAGE.marginLeft + 5, yPos + 7);
+  doc.setFontSize(12);                 // ← era 15
+  doc.text(title, PAGE.marginLeft + 5, yPos + 8.5);
 
-  // Fecha
-  doc.setTextColor(...COLORS.textMuted);
+  // Fecha a la derecha, dentro de la banda
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.text(
-    `Generado el ${new Date().toLocaleString('es-ES', {
-      day: '2-digit', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-    })}`,
-    PAGE.marginLeft + 5,
-    yPos + 12.5
-  );
+  doc.setFontSize(7.5);
+  doc.setTextColor(219, 234, 254);
+  const fecha = new Date().toLocaleString('es-ES', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+  const fechaWidth = doc.getTextWidth(fecha);
+  doc.text(fecha, PAGE.width - PAGE.marginRight - 4 - fechaWidth, yPos + 8.5);
 
-  return yPos + boxHeight + 6;
+  return yPos + boxHeight + 5;         // ← era +8
 };
 
-/**
- * Dibuja el footer en TODAS las páginas al final.
- */
+/* ═══════════════════════════════════════════════════════════════
+   FOOTER COMPACTO
+   ═══════════════════════════════════════════════════════════════ */
 const dibujarFooterTodasPaginas = (doc, companyName) => {
   const totalPages = doc.internal.getNumberOfPages();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const footerY = pageHeight - 10;
+  const footerY = pageHeight - 8;      // ← más cerca del borde
 
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
 
-    // Línea superior
     doc.setDrawColor(...COLORS.border);
-    doc.setLineWidth(0.2);
-    doc.line(PAGE.marginLeft, footerY - 5, PAGE.width - PAGE.marginRight, footerY - 5);
+    doc.setLineWidth(0.15);
+    doc.line(PAGE.marginLeft, footerY - 4, PAGE.width - PAGE.marginRight, footerY - 4);
 
-    // Texto izquierda: nombre empresa
-    doc.setTextColor(...COLORS.textMuted);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
+    doc.setTextColor(...COLORS.muted);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
     doc.text(companyName || 'Veterinaria', PAGE.marginLeft, footerY);
 
-    // Texto centro: fecha de generación
-    doc.setTextColor(...COLORS.textLight);
-    const fechaGen = `Generado el ${new Date().toLocaleDateString('es-ES')}`;
-    const fechaWidth = doc.getTextWidth(fechaGen);
-    doc.text(fechaGen, (PAGE.width - fechaWidth) / 2, footerY);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    doc.setTextColor(...COLORS.mutedLight);
+    const centerText = 'Generado automáticamente';
+    const centerWidth = doc.getTextWidth(centerText);
+    doc.text(centerText, (PAGE.width - centerWidth) / 2, footerY);
 
-    // Texto derecha: página X de Y
-    doc.setTextColor(...COLORS.textMuted);
-    const pageText = `Página ${i} de ${totalPages}`;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    doc.setTextColor(...COLORS.inkSoft);
+    const pageText = `${i} / ${totalPages}`;
     const pageTextWidth = doc.getTextWidth(pageText);
     doc.text(pageText, PAGE.width - PAGE.marginRight - pageTextWidth, footerY);
   }
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   ESTILOS DE TABLAS
+   ESTILOS DE TABLAS (COMPACTOS)
    ═══════════════════════════════════════════════════════════════ */
-
-/** Estilo base para autoTable, coherente con el resto del sistema */
 const getTableStyles = () => ({
-  theme: 'plain',
+  theme: 'grid',
   styles: {
     font: 'helvetica',
-    fontSize: 9,
-    cellPadding: { top: 2.5, right: 3, bottom: 2.5, left: 3 },
-    textColor: COLORS.textDark,
+    fontSize: 8,                       // ← era 9
+    cellPadding: { top: 1.8, right: 3, bottom: 1.8, left: 3 },  // ← era 3/4/3/4
+    textColor: COLORS.ink,
     lineColor: COLORS.border,
-    lineWidth: 0,
+    lineWidth: 0.1,
+    valign: 'middle',
+    overflow: 'linebreak',
   },
   headStyles: {
     fillColor: COLORS.primary,
     textColor: COLORS.white,
     fontStyle: 'bold',
-    fontSize: 9,
-    cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
+    fontSize: 8,                       // ← era 9
+    cellPadding: { top: 2, right: 3, bottom: 2, left: 3 },      // ← era 3.5/4/3.5/4
     lineWidth: 0,
   },
   bodyStyles: {
-    lineWidth: 0,
+    lineWidth: 0.1,
+    lineColor: COLORS.border,
   },
   alternateRowStyles: {
-    fillColor: COLORS.bgLight,
+    fillColor: COLORS.bg,
   },
 });
 
-/** Estilo para keyValue (sin header, tipo "ficha") */
 const getKeyValueStyles = () => ({
   theme: 'plain',
   styles: {
     font: 'helvetica',
-    fontSize: 9.5,
-    cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
-    textColor: COLORS.textDark,
+    fontSize: 8.5,                     // ← era 9.5
+    cellPadding: { top: 2, right: 3, bottom: 2, left: 3 },      // ← era 3.5/4/3.5/4
+    textColor: COLORS.ink,
     lineColor: COLORS.border,
     lineWidth: 0,
+    valign: 'middle',
+    overflow: 'linebreak',
   },
   bodyStyles: {
     lineWidth: 0,
   },
   alternateRowStyles: {
-    fillColor: COLORS.bgLight,
+    fillColor: COLORS.bg,
   },
 });
 
 /* ═══════════════════════════════════════════════════════════════
-   PROCESADORES DE SECCIÓN
+   RENDERS DE SECCIÓN (COMPACTOS)
    ═══════════════════════════════════════════════════════════════ */
-
-/** Sección tipo "keyValue": tabla sin header, con labels y valores */
 const renderKeyValue = (doc, section, yPos) => {
   const body = section.content.map(([key, value]) => [
     String(key ?? ''),
@@ -311,17 +310,16 @@ const renderKeyValue = (doc, section, yPos) => {
     columnStyles: {
       0: {
         fontStyle: 'bold',
-        textColor: COLORS.textMuted,
-        cellWidth: 55,
-        fontSize: 8.5,
+        textColor: COLORS.muted,
+        cellWidth: 48,                 // ← era 55
+        fontSize: 8,
       },
       1: {
-        textColor: COLORS.textDark,
+        textColor: COLORS.ink,
         cellWidth: 'auto',
       },
     },
     didParseCell: (data) => {
-      // Si el valor corresponde a un estado, colorearlo
       if (data.section === 'body' && data.column.index === 1) {
         const color = esEstadoColoreable(data.cell.raw);
         if (color) {
@@ -332,10 +330,9 @@ const renderKeyValue = (doc, section, yPos) => {
     },
   });
 
-  return doc.lastAutoTable.finalY + 6;
+  return doc.lastAutoTable.finalY + 4;  // ← era +6
 };
 
-/** Sección tipo "table": tabla estándar con header */
 const renderTable = (doc, section, yPos) => {
   autoTable(doc, {
     ...getTableStyles(),
@@ -344,48 +341,45 @@ const renderTable = (doc, section, yPos) => {
     body: section.data,
     margin: { left: PAGE.marginLeft, right: PAGE.marginRight },
     didParseCell: (data) => {
-      // Colorear estados en el body
       if (data.section === 'body') {
         const color = esEstadoColoreable(data.cell.raw);
         if (color) {
           data.cell.styles.textColor = color;
           data.cell.styles.fontStyle = 'bold';
         }
-      }
-      // Alinear a la derecha las columnas con números (heurística)
-      if (data.section === 'body' && typeof data.cell.raw === 'number') {
-        data.cell.styles.halign = 'right';
+        if (typeof data.cell.raw === 'number') {
+          data.cell.styles.halign = 'right';
+        }
       }
     },
   });
 
-  return doc.lastAutoTable.finalY + 6;
+  return doc.lastAutoTable.finalY + 4;  // ← era +6
 };
 
-/** Sección tipo "text": párrafo libre */
 const renderText = (doc, section, yPos) => {
-  doc.setTextColor(...COLORS.textDark);
+  doc.setTextColor(...COLORS.ink);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
+  doc.setFontSize(9);                   // ← era 10
   const lines = doc.splitTextToSize(section.content, PAGE.contentWidth);
   doc.text(lines, PAGE.marginLeft, yPos);
-  return yPos + lines.length * 5 + 4;
+  return yPos + lines.length * 4.2 + 3; // ← era *5 + 4
 };
 
-/** Sección tipo "image": imagen al ancho completo */
 const renderImage = async (doc, section, yPos) => {
   try {
     const imgBase64 = await urlToBase64(section.content);
     if (!imgBase64) {
-      doc.setTextColor(...COLORS.textMuted);
-      doc.setFontSize(9);
+      doc.setTextColor(...COLORS.muted);
+      doc.setFontSize(8.5);
       doc.text('(No se pudo cargar la imagen)', PAGE.marginLeft, yPos);
-      return yPos + 6;
+      return yPos + 5;
     }
 
     const dims = await getImageDimensions(imgBase64);
     const maxWidth = PAGE.contentWidth;
-    const maxHeight = doc.internal.pageSize.getHeight() - yPos - PAGE.marginBottom - 10;
+    // Reservamos más espacio abajo para que quepa completo
+    const maxHeight = doc.internal.pageSize.getHeight() - yPos - PAGE.marginBottom - 8;
 
     let w = dims.width;
     let h = dims.height;
@@ -394,38 +388,41 @@ const renderImage = async (doc, section, yPos) => {
 
     const fmt = detectImageFormat(imgBase64);
     doc.addImage(imgBase64, fmt, PAGE.marginLeft, yPos, w, h);
-    return yPos + h + 6;
+
+    doc.setDrawColor(...COLORS.border);
+    doc.setLineWidth(0.15);
+    doc.rect(PAGE.marginLeft - 0.4, yPos - 0.4, w + 0.8, h + 0.8);
+
+    return yPos + h + 4;
   } catch (error) {
-    doc.setTextColor(...COLORS.textMuted);
-    doc.setFontSize(9);
+    doc.setTextColor(...COLORS.muted);
+    doc.setFontSize(8.5);
     doc.text('(Error al cargar la imagen)', PAGE.marginLeft, yPos);
-    return yPos + 6;
+    return yPos + 5;
   }
 };
 
-/** Sección tipo "centeredImage": título centrado + imagen centrada */
 const renderCenteredImage = async (doc, section, yPos) => {
-  // Título centrado
   doc.setTextColor(...COLORS.primary);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
+  doc.setFontSize(11);                  // ← era 12
   const pageWidth = doc.internal.pageSize.getWidth();
   const titleWidth = doc.getTextWidth(section.title);
   doc.text(section.title, (pageWidth - titleWidth) / 2, yPos);
-  yPos += 8;
+  yPos += 6;                            // ← era 8
 
   try {
     const imgBase64 = await urlToBase64(section.content);
     if (!imgBase64) {
-      doc.setTextColor(...COLORS.textMuted);
-      doc.setFontSize(9);
+      doc.setTextColor(...COLORS.muted);
+      doc.setFontSize(8.5);
       doc.text('(No se pudo cargar la imagen)', PAGE.marginLeft, yPos);
-      return yPos + 6;
+      return yPos + 5;
     }
 
     const dims = await getImageDimensions(imgBase64);
     const maxWidth = PAGE.contentWidth;
-    const maxHeight = doc.internal.pageSize.getHeight() - yPos - PAGE.marginBottom - 10;
+    const maxHeight = doc.internal.pageSize.getHeight() - yPos - PAGE.marginBottom - 8;
 
     let w = dims.width;
     let h = dims.height;
@@ -435,23 +432,48 @@ const renderCenteredImage = async (doc, section, yPos) => {
     const x = (pageWidth - w) / 2;
     const fmt = detectImageFormat(imgBase64);
     doc.addImage(imgBase64, fmt, x, yPos, w, h);
-    return yPos + h + 6;
+
+    doc.setDrawColor(...COLORS.border);
+    doc.setLineWidth(0.15);
+    doc.rect(x - 0.4, yPos - 0.4, w + 0.8, h + 0.8);
+
+    return yPos + h + 4;
   } catch (error) {
-    doc.setTextColor(...COLORS.textMuted);
-    doc.setFontSize(9);
+    doc.setTextColor(...COLORS.muted);
+    doc.setFontSize(8.5);
     doc.text('(Error al cargar la imagen)', PAGE.marginLeft, yPos);
-    return yPos + 6;
+    return yPos + 5;
   }
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   GENERADOR BASE (API pública interna)
+   TÍTULO DE SECCIÓN (compacto)
    ═══════════════════════════════════════════════════════════════ */
+const dibujarTituloSeccion = (doc, title, yPos) => {
+  // Barra acento
+  doc.setFillColor(...COLORS.primary);
+  doc.rect(PAGE.marginLeft, yPos - 2.8, 1.2, 3.5, 'F');   // ← era 1.5x4.5
 
+  // Título
+  doc.setTextColor(...COLORS.primary);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9.5);                 // ← era 11
+  doc.text(title.toUpperCase(), PAGE.marginLeft + 3.5, yPos);
+
+  // Línea horizontal debajo
+  doc.setDrawColor(...COLORS.border);
+  doc.setLineWidth(0.15);
+  doc.line(PAGE.marginLeft, yPos + 2.2, PAGE.width - PAGE.marginRight, yPos + 2.2);
+
+  return yPos + 5.5;                    // ← era +8
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   GENERADOR BASE
+   ═══════════════════════════════════════════════════════════════ */
 const generarPDFBase = async (title, sections, estilos = {}) => {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
 
-  // Obtener datos de la empresa
   let companyName = 'Veterinaria';
   let logoUrl = null;
   try {
@@ -462,38 +484,28 @@ const generarPDFBase = async (title, sections, estilos = {}) => {
     console.error('Error obteniendo settings:', e);
   }
 
-  // ── 1. Cabecera ──
-  let yPos = await dibujarHeader(doc, companyName, logoUrl);
+  const docId = generarDocId();
 
-  // ── 2. Banda con el título ──
+  // 1. Header
+  let yPos = await dibujarHeader(doc, companyName, logoUrl, docId);
+
+  // 2. Título
   yPos = dibujarTituloDocumento(doc, title, yPos);
 
-  // ── 3. Secciones ──
+  // 3. Secciones
   for (let i = 0; i < sections.length; i++) {
     const section = sections[i];
 
-    // Salto de página manual solicitado
     if (section.pageBreak) {
       doc.addPage();
-      yPos = PAGE.marginTop + 5;
+      yPos = PAGE.marginTop + 3;
     }
 
-    // Espacio mínimo para el título de la sección
     if (section.type !== 'centeredImage') {
-      yPos = ensureSpace(doc, yPos, 20);
-
-      // Título de sección con barra azul
-      doc.setFillColor(...COLORS.primary);
-      doc.rect(PAGE.marginLeft, yPos - 3.5, 1.2, 4, 'F');
-
-      doc.setTextColor(...COLORS.primaryDark);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11);
-      doc.text(section.title, PAGE.marginLeft + 4, yPos);
-      yPos += 6;
+      yPos = ensureSpace(doc, yPos, 18);  // ← era 24
+      yPos = dibujarTituloSeccion(doc, section.title, yPos);
     }
 
-    // Contenido según tipo
     switch (section.type) {
       case 'keyValue':
         yPos = renderKeyValue(doc, section, yPos);
@@ -511,27 +523,24 @@ const generarPDFBase = async (title, sections, estilos = {}) => {
         yPos = await renderCenteredImage(doc, section, yPos);
         break;
       default:
-        // Tipo desconocido → lo tratamos como texto
         if (typeof section.content === 'string') {
           yPos = renderText(doc, section, yPos);
         }
     }
 
-    // Espacio extra entre secciones
-    yPos += 2;
+    yPos += 2;                          // ← era 3
   }
 
-  // ── 4. Footer en todas las páginas ──
+  // 4. Footer
   dibujarFooterTodasPaginas(doc, companyName);
 
-  // ── 5. Abrir en nueva pestaña ──
+  // 5. Abrir
   window.open(doc.output('bloburl'), '_blank');
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   API PÚBLICA — Funciones específicas
+   API PÚBLICA
    ═══════════════════════════════════════════════════════════════ */
-
 export const generateFacturaPDF = async (title, sections, estilos) =>
   generarPDFBase(title, sections, estilos);
 
